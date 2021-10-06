@@ -58,17 +58,32 @@ public class Lexer {
         buffer = src;
     }
 
+    private char getVisibleChar() throws IOException {
+        char res = '\u0000';
+        while (hasNext && Character.isWhitespace(res)) res = getChar();
+        return res;
+    }
+
     public String nextToken() throws IOException {
         if (!hasNext) return null;
+        char ch = getVisibleChar();
+        if (Character.isWhitespace(ch)) {
+            hasNext = false;
+            return null;
+        }
         String token = "";
-        char ch = getChar();
 
-        token += ch;
+
         return token;
     }
 
     public static void main(String[] args) throws IOException {
         Lexer lexer = new Lexer(System.in);
-        while (lexer.hasNext()) System.out.println(lexer.nextToken());
+        String firstToken = lexer.nextToken();
+        if (firstToken != null) System.out.print(firstToken);
+        while (lexer.hasNext()) {
+            String token = lexer.nextToken();
+            if (token != null) System.out.printf("\n%s", token);
+        }
     }
 }
