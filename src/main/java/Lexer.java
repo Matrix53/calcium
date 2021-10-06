@@ -76,13 +76,13 @@ public class Lexer {
         String token = String.valueOf(ch);
 
         // identifier
-        if (Character.isLetter(ch)) {
+        if (Character.isLetter(ch) || ch == '_') {
             while (hasNext) {
                 ch = getChar();
-                if (Character.isLetterOrDigit(ch)) token += ch;
+                if (Character.isLetterOrDigit(ch) || ch == '_') token += ch;
                 else {
                     ungetChar(ch);
-                    if(map.containsKey(token)) token=map.get(token);
+                    if (map.containsKey(token)) token = map.get(token);
                     else token = "Ident(" + token + ")";
                     break;
                 }
@@ -114,7 +114,7 @@ public class Lexer {
 
         // symbol
         else if (map.containsKey(token)) {
-            token=map.get(token);
+            token = map.get(token);
         }
 
         // error
