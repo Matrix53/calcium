@@ -1,0 +1,6 @@
+[jobs.lexer]
+image = { source = "dockerfile", path = "."}
+
+run = [
+  "java -cp dst/ Lexer < $input",
+]
