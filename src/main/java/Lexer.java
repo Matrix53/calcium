@@ -45,7 +45,7 @@ public class Lexer {
             int tmp = in.read();
             if (tmp == -1) {
                 hasNext = false;
-                res = '\u0000';
+                res = ' ';
             } else {
                 res = (char) tmp;
             }
@@ -53,26 +53,75 @@ public class Lexer {
         return res;
     }
 
-    private void ungetChar(char src) {
+    private void ungetChar(char ch) {
         hasBuffer = true;
-        buffer = src;
+        buffer = ch;
+        if (!Character.isWhitespace(ch)) hasNext = true;
     }
 
     private char getVisibleChar() throws IOException {
-        char res = '\u0000';
+        char res = ' ';
         while (hasNext && Character.isWhitespace(res)) res = getChar();
         return res;
     }
 
     public String nextToken() throws IOException {
+        // init
         if (!hasNext) return null;
         char ch = getVisibleChar();
         if (Character.isWhitespace(ch)) {
             hasNext = false;
             return null;
         }
-        String token = "";
+        String token = String.valueOf(ch);
 
+        // identifier
+        if (Character.isLetter(ch)) {
+            while (hasNext) {
+                ch = getChar();
+                if (Character.isLetterOrDigit(ch)) token += ch;
+                else {
+                    ungetChar(ch);
+                    if(map.containsKey(token)) token=map.get(token);
+                    else token = "Ident(" + token + ")";
+                    break;
+                }
+            }
+        }
+
+        // number
+        else if (Character.isDigit(ch)) {
+            while (hasNext) {
+                ch = getChar();
+                if (Character.isDigit(ch)) token += ch;
+                else {
+                    ungetChar(ch);
+                    token = "Number(" + token + ")";
+                    break;
+                }
+            }
+        }
+
+        // equal
+        else if (ch == '=') {
+            ch = getChar();
+            if (ch == '=') token = "Equal";
+            else {
+                ungetChar(ch);
+                token = "Assign";
+            }
+        }
+
+        // symbol
+        else if (map.containsKey(token)) {
+            token=map.get(token);
+        }
+
+        // error
+        else {
+            System.out.printf("\nErr");
+            return null;
+        }
 
         return token;
     }
