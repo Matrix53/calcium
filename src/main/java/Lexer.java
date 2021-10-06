@@ -130,9 +130,11 @@ public class Lexer {
         Lexer lexer = new Lexer(System.in);
         String firstToken = lexer.nextToken();
         if (firstToken != null) System.out.print(firstToken);
+        else return;
         while (lexer.hasNext()) {
             String token = lexer.nextToken();
             if (token != null) System.out.printf("\n%s", token);
+            else return;
         }
     }
 }
