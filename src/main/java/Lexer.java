@@ -105,7 +105,7 @@ public class Lexer {
         // equal
         else if (ch == '=') {
             ch = getChar();
-            if (ch == '=') token = "Equal";
+            if (ch == '=') token = "Eq";
             else {
                 ungetChar(ch);
                 token = "Assign";
