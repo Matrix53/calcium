@@ -3,3 +3,9 @@
 # Added by cargo
 
 /target
+
+# Test files
+
+test.c
+test.ll
+answer.ll
