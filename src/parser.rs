@@ -1,8 +1,6 @@
-use super::ast::*;
 use super::token::*;
-pub fn parse(tokens:&Vec<Token>)->CompUnit{
-    let ans=CompUnit{
-        comp_unit_items:Vec::new()
-    };
+
+pub fn parse(tokens: &Vec<Token>) -> String {
+    let ans = String::from("hello");
     ans
 }
