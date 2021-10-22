@@ -1,41 +1,5 @@
-pub enum Token {
-    Ident { value: String },
-    Number { value: i32 },
-    Const,
-    Int,
-    Void,
-    If,
-    Else,
-    While,
-    Break,
-    Continue,
-    Return,
-    Comma,
-    Semicolon,
-    LeftParenthesis,
-    RightParenthesis,
-    LeftBracket,
-    RightBracket,
-    LeftBrace,
-    RightBrace,
-    Equal,
-    NotEqual,
-    Assign,
-    Plus,
-    Minus,
-    Not,
-    Multiply,
-    Divide,
-    Mod,
-    Less,
-    Greater,
-    LessOrEqual,
-    GreaterOrEqual,
-    And,
-    Or,
-}
-
-pub fn tokenize(source:&String) -> Vec<Token> {
+use super::token::Token;
+pub fn tokenize(source: &String) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     tokens
 }
