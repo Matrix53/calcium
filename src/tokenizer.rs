@@ -87,7 +87,35 @@ pub fn tokenize(source: &String) -> LinkedList<Token> {
                     panic!("syntax error!");
                 }
             }
-            _ => {}
+            '/' => {
+                if reader.has_next() {
+                    chr = reader.getc();
+                    match chr {
+                        '/' => while reader.has_next() && reader.getc() != '\n' {},
+                        '*' => loop {
+                            while reader.has_next() && reader.getc() != '*' {}
+                            if !reader.has_next() || reader.getc() == '/' {
+                                break;
+                            }
+                        },
+                        _ => {
+                            reader.ungetc(&chr);
+                            tokens.push_back(Token::Divide);
+                        }
+                    }
+                } else {
+                    tokens.push_back(Token::Divide);
+                }
+            }
+            _ => {
+                if chr.is_ascii_whitespace() {
+                    continue;
+                } else if chr.is_ascii_digit() {
+                } else if chr.is_ascii_alphabetic() {
+                } else {
+                    panic!("syntax error!");
+                }
+            }
         }
     }
     tokens

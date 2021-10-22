@@ -1,7 +1,7 @@
 mod parser;
+mod reader;
 mod token;
 mod tokenizer;
-mod reader;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
