@@ -1,3 +1,4 @@
+#[derive(PartialEq, Eq)]
 pub enum Token {
     Ident(String),
     Number(i32),
