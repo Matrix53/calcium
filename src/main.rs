@@ -3,15 +3,15 @@ mod reader;
 mod token;
 mod tokenizer;
 
-use std::{collections::LinkedList, primitive};
+// use std::{collections::LinkedList, primitive};
 
 use parser::Parser;
 use tokenizer::Tokenizer;
 
-#[derive(PartialEq, Eq)]
-enum Test {
-    A,
-}
+// #[derive(PartialEq, Eq)]
+// enum Test {
+//     A,
+// }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

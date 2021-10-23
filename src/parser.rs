@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
     fn parse_func_def(&mut self) -> String {
         let func_type = match self.iter.next().unwrap() {
             Token::Void => "void",
-            Token::Int => "int",
+            Token::Int => "i32",
             _ => panic!("syntax error!"),
         };
         let func_name = match self.iter.next().unwrap() {
@@ -104,6 +104,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block_item(&mut self) -> String {
+        " ".to_string()
+    }
+
+    fn parse_stmt(&mut self) -> String {
         self.consume_token(Token::Return);
         let number = match self.iter.next().unwrap() {
             Token::Number(num) => num,
@@ -111,10 +115,6 @@ impl<'a> Parser<'a> {
         };
         self.consume_token(Token::Semicolon);
         format!("    ret i32 {}", number)
-    }
-
-    fn parse_stmt(&mut self) -> String {
-        " ".to_string()
     }
 
     fn parse_lval(&mut self) -> String {
