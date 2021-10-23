@@ -2,9 +2,8 @@ use std::collections::LinkedList;
 
 use super::token::Token;
 
-pub struct Parser{
-    tokens:LinkedList<Token>,
-    pointer:
+pub struct Parser {
+    tokens: LinkedList<Token>,
 }
 
 impl Parser {
@@ -12,8 +11,8 @@ impl Parser {
         if tokens.is_empty() {
             panic!("syntax error!");
         }
-        tokens.
-        parse_comp_unit()
+        let mut parser = Parser { tokens };
+        parser.parse_comp_unit()
     }
 
     fn parse_comp_unit(&mut self) -> String {
