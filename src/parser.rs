@@ -119,11 +119,20 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_unary_exp(&mut self) -> String {
-        " ".to_string()
-    }
-
-    fn parse_unary_op(&mut self) -> String {
-        " ".to_string()
+        match self.iter.next().unwrap() {
+            Token::Number(num) => num.to_string(),
+            Token::LParen => {
+                let ans = self.parse_add_exp();
+                self.consume_token(Token::RParen);
+                ans
+            }
+            Token::Plus => self.parse_unary_exp(),
+            Token::Minus => {
+                let ans = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
+                (-ans).to_string()
+            }
+            _ => panic!("syntax error!"),
+        }
     }
 
     fn parse_func_rparams(&mut self) -> String {
