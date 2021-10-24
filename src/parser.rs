@@ -109,10 +109,7 @@ impl<'a> Parser<'a> {
 
     fn parse_stmt(&mut self) -> String {
         self.consume_token(Token::Return);
-        let number = match self.iter.next().unwrap() {
-            Token::Number(num) => num,
-            _ => panic!("syntax error!"),
-        };
+        let number = self.parse_add_exp();
         self.consume_token(Token::Semicolon);
         format!("    ret i32 {}", number)
     }
@@ -134,11 +131,48 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_mul_exp(&mut self) -> String {
-        " ".to_string()
+        let mut operand = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
+        loop {
+            match self.iter.clone().next() {
+                Some(Token::Multiply) => {
+                    self.iter.next();
+                    let tmp = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
+                    operand *= tmp;
+                }
+                Some(Token::Divide) => {
+                    self.iter.next();
+                    let tmp = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
+                    operand /= tmp;
+                }
+                Some(Token::Mod) => {
+                    self.iter.next();
+                    let tmp = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
+                    operand %= tmp;
+                }
+                _ => break,
+            }
+        }
+        format!("{}", operand)
     }
 
     fn parse_add_exp(&mut self) -> String {
-        " ".to_string()
+        let mut operand = i32::from_str_radix(self.parse_mul_exp().as_str(), 10).unwrap();
+        loop {
+            match self.iter.clone().next() {
+                Some(Token::Plus) => {
+                    self.iter.next();
+                    let tmp = i32::from_str_radix(self.parse_mul_exp().as_str(), 10).unwrap();
+                    operand += tmp;
+                }
+                Some(Token::Minus) => {
+                    self.iter.next();
+                    let tmp = i32::from_str_radix(self.parse_mul_exp().as_str(), 10).unwrap();
+                    operand -= tmp;
+                }
+                _ => break,
+            }
+        }
+        format!("{}", operand)
     }
 
     fn parse_rel_exp(&mut self) -> String {
