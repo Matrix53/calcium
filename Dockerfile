@@ -1,4 +1,4 @@
 FROM rust:latest
-COPY ./* /calcium/
+COPY ./ /calcium/
 WORKDIR /calcium/
 RUN cargo build
