@@ -2,6 +2,7 @@ mod parser;
 mod reader;
 mod token;
 mod tokenizer;
+mod symbol;
 
 // use std::{collections::LinkedList, primitive};
 
