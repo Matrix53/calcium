@@ -1,8 +1,8 @@
 mod parser;
 mod reader;
+mod symbol;
 mod token;
 mod tokenizer;
-mod symbol;
 
 // use std::{collections::LinkedList, primitive};
 
@@ -20,6 +20,7 @@ fn main() {
     let tokens = Tokenizer::tokenize(&source);
     let output = Parser::parse(&tokens);
     std::fs::write(&args[2], output).unwrap();
+
     // let mut a = vec![1, 2, 3, 4, 5];
     // println!("{}", a.iter().nth(0).unwrap());
     // println!("{{\n    {}\n}}", "asdad".to_string());
@@ -28,4 +29,6 @@ fn main() {
     // let c = &a;
     // let d = &b;
     // println!("{}", c == d);
+    // let a = Vec::new();
+    // println!("{:?}", vec![1, 2]);
 }

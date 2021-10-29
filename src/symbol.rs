@@ -6,6 +6,57 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
+    pub fn new() -> SymbolTable {
+        let mut table = SymbolTable {
+            func_table: HashMap::new(),
+            var_table: LinkedList::new(),
+        };
+        table.func_table.insert(
+            "getint".to_string(),
+            Function {
+                has_return: true,
+                params: vec![],
+            },
+        );
+        table.func_table.insert(
+            "getch".to_string(),
+            Function {
+                has_return: true,
+                params: vec![],
+            },
+        );
+        table.func_table.insert(
+            "getarray".to_string(),
+            Function {
+                has_return: true,
+                params: vec![vec![0]],
+            },
+        );
+        table.func_table.insert(
+            "putint".to_string(),
+            Function {
+                has_return: false,
+                params: vec![vec![]],
+            },
+        );
+        table.func_table.insert(
+            "putch".to_string(),
+            Function {
+                has_return: false,
+                params: vec![vec![]],
+            },
+        );
+        table.func_table.insert(
+            "putarray".to_string(),
+            Function {
+                has_return: false,
+                params: vec![vec![], vec![0]],
+            },
+        );
+        table.var_table.push_front(HashMap::new());
+        table
+    }
+
     pub fn go_down(&mut self) {
         self.var_table.push_front(HashMap::new());
     }
