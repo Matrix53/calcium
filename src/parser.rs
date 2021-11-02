@@ -1,9 +1,15 @@
 use std::collections::{linked_list::Iter, LinkedList};
 
+use crate::assigner;
+
+use super::assigner::Assigner;
+use super::symbol::SymbolTable;
 use super::token::Token;
 
 pub struct Parser<'a> {
     iter: Iter<'a, Token>,
+    symbol: SymbolTable,
+    assigner: Assigner<'a>,
 }
 
 impl<'a> Parser<'a> {
@@ -21,6 +27,8 @@ impl<'a> Parser<'a> {
         }
         let mut parser = Parser {
             iter: tokens.iter(),
+            symbol: SymbolTable::new(),
+            assigner: Assigner::new(),
         };
         parser.parse_comp_unit()
     }

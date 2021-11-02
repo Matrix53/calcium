@@ -16,4 +16,13 @@ impl<'a> Assigner<'a> {
             var: 0,
         }
     }
+    pub fn new_func(&mut self) {
+        self.block_pos.clear();
+        self.while_block_pos.clear();
+        self.pre_var = 0;
+        self.var = 0;
+    }
+    pub fn new_pre_var() -> String {
+        "".to_string()
+    }
 }
