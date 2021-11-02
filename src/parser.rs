@@ -8,6 +8,7 @@ pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     symbol: SymbolTable,
     assigner: Assigner,
+    code: String,
 }
 
 impl<'a> Parser<'a> {
@@ -15,6 +16,9 @@ impl<'a> Parser<'a> {
         if self.iter.next().unwrap() != &token {
             panic!("syntax error!");
         }
+    }
+    fn add_ins(&mut self, ins: String) {
+        self.code += format!("{}\n", ins).as_str();
     }
 }
 
@@ -27,6 +31,7 @@ impl<'a> Parser<'a> {
             iter: tokens.iter(),
             symbol: SymbolTable::new(),
             assigner: Assigner::new(),
+            code: String::new(),
         };
         parser.parse_comp_unit()
     }
