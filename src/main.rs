@@ -1,3 +1,4 @@
+mod assigner;
 mod parser;
 mod reader;
 mod symbol;
