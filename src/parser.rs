@@ -1,7 +1,5 @@
 use std::collections::{linked_list::Iter, LinkedList};
 
-use crate::assigner;
-
 use super::assigner::Assigner;
 use super::symbol::SymbolTable;
 use super::token::Token;
@@ -9,7 +7,7 @@ use super::token::Token;
 pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     symbol: SymbolTable,
-    assigner: Assigner<'a>,
+    assigner: Assigner,
 }
 
 impl<'a> Parser<'a> {
