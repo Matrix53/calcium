@@ -1,7 +1,6 @@
 use std::collections::{linked_list::Iter, LinkedList};
 
 use super::assigner::Assigner;
-use super::symbol::Function;
 use super::symbol::SymbolTable;
 use super::token::Token;
 
@@ -9,8 +8,8 @@ pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     symbol: SymbolTable,
     assigner: Assigner,
-    pre_code: String,
-    block_code: String,
+    pre_code: String,   // alloca部分，递归过程中添加代码
+    block_code: String, // 基本块部分，递归过程中添加代码
 }
 
 impl<'a> Parser<'a> {
@@ -45,10 +44,15 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_comp_unit(&mut self) -> String {
-        match self.iter.clone().nth(2).unwrap() {
-            Token::LParen => self.parse_func_def(),
-            _ => self.parse_decl(),
+        let mut res = String::from("");
+        while self.iter.clone().next() != None {
+            res += match self.iter.clone().nth(2).unwrap() {
+                Token::LParen => self.parse_func_def(),
+                _ => self.parse_decl(),
+            }
+            .as_str()
         }
+        res
     }
 
     fn parse_decl(&mut self) -> String {
@@ -81,6 +85,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_func_def(&mut self) -> String {
+        // 声明解析
         let func_type = match self.iter.next().unwrap() {
             Token::Void => "void",
             Token::Int => "i32",
@@ -96,8 +101,13 @@ impl<'a> Parser<'a> {
             _ => self.parse_func_fparams(),
         };
         self.consume_token(Token::RParen);
+        // 初始化
         self.symbol
             .insert_func(func_name, func_type.eq("i32"), &func_params);
+        self.assigner.reset();
+        self.pre_code.clear();
+        self.block_code.clear();
+        // 翻译并返回
         self.parse_block();
         self.symbol.get_func(func_name).get_definition()
             + self.pre_code.as_str()
@@ -114,9 +124,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> String {
+        self.symbol.go_down();
         self.consume_token(Token::LBrace);
         let stmts = self.parse_stmt();
         self.consume_token(Token::RBrace);
+        self.symbol.go_up();
         stmts
     }
 

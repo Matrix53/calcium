@@ -15,7 +15,7 @@ impl Assigner {
         }
     }
 
-    pub fn new_func(&mut self) {
+    pub fn reset(&mut self) {
         self.block_pos.clear();
         self.while_block_pos.clear();
         self.pre_var = 0;
