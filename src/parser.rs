@@ -1,6 +1,7 @@
 use std::collections::{linked_list::Iter, LinkedList};
 
 use super::assigner::Assigner;
+use super::symbol::Function;
 use super::symbol::SymbolTable;
 use super::token::Token;
 
@@ -8,7 +9,8 @@ pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     symbol: SymbolTable,
     assigner: Assigner,
-    code: String,
+    pre_code: String,
+    block_code: String,
 }
 
 impl<'a> Parser<'a> {
@@ -17,8 +19,13 @@ impl<'a> Parser<'a> {
             panic!("syntax error!");
         }
     }
-    fn add_ins(&mut self, ins: String) {
-        self.code += format!("{}\n", ins).as_str();
+
+    fn add_block_ins(&mut self, ins: String) {
+        self.block_code += format!("    {}\n", ins).as_str();
+    }
+
+    fn add_pre_ins(&mut self, ins: String) {
+        self.pre_code += format!("    {}\n", ins).as_str();
     }
 }
 
@@ -31,7 +38,8 @@ impl<'a> Parser<'a> {
             iter: tokens.iter(),
             symbol: SymbolTable::new(),
             assigner: Assigner::new(),
-            code: String::new(),
+            pre_code: String::new(),
+            block_code: String::new(),
         };
         parser.parse_comp_unit()
     }
@@ -82,25 +90,23 @@ impl<'a> Parser<'a> {
             Token::Ident(name) => name,
             _ => panic!("syntax error!"),
         };
-        // 当前lab的特判
-        if func_name != "main" {
-            panic!("syntax error!");
-        }
         self.consume_token(Token::LParen);
         let func_params = match self.iter.clone().next().unwrap() {
-            Token::RParen => "".to_string(),
+            Token::RParen => vec![],
             _ => self.parse_func_fparams(),
         };
         self.consume_token(Token::RParen);
-        let block = self.parse_block();
-        format!(
-            "define {} @{}({}) {{\n{}\n}}\n",
-            func_type, func_name, func_params, block
-        )
+        self.symbol
+            .insert_func(func_name, func_type.eq("i32"), &func_params);
+        self.parse_block();
+        self.symbol.get_func(func_name).get_definition()
+            + self.pre_code.as_str()
+            + self.block_code.as_str()
+            + "}}\n"
     }
 
-    fn parse_func_fparams(&mut self) -> String {
-        " ".to_string()
+    fn parse_func_fparams(&mut self) -> Vec<Vec<i32>> {
+        vec![]
     }
 
     fn parse_func_fparam(&mut self) -> String {

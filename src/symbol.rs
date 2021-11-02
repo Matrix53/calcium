@@ -11,48 +11,12 @@ impl SymbolTable {
             func_table: HashMap::new(),
             var_table: LinkedList::new(),
         };
-        table.func_table.insert(
-            "getint".to_string(),
-            Function {
-                has_return: true,
-                params: vec![],
-            },
-        );
-        table.func_table.insert(
-            "getch".to_string(),
-            Function {
-                has_return: true,
-                params: vec![],
-            },
-        );
-        table.func_table.insert(
-            "getarray".to_string(),
-            Function {
-                has_return: true,
-                params: vec![vec![0]],
-            },
-        );
-        table.func_table.insert(
-            "putint".to_string(),
-            Function {
-                has_return: false,
-                params: vec![vec![]],
-            },
-        );
-        table.func_table.insert(
-            "putch".to_string(),
-            Function {
-                has_return: false,
-                params: vec![vec![]],
-            },
-        );
-        table.func_table.insert(
-            "putarray".to_string(),
-            Function {
-                has_return: false,
-                params: vec![vec![], vec![0]],
-            },
-        );
+        table.insert_func(&"getint".to_string(), true, &vec![]);
+        table.insert_func(&"getch".to_string(), true, &vec![]);
+        table.insert_func(&"getarray".to_string(), true, &vec![vec![0]]);
+        table.insert_func(&"putint".to_string(), false, &vec![vec![]]);
+        table.insert_func(&"putch".to_string(), false, &vec![vec![]]);
+        table.insert_func(&"putarray".to_string(), false, &vec![vec![], vec![0]]);
         table.var_table.push_front(HashMap::new());
         table
     }
@@ -78,11 +42,18 @@ impl SymbolTable {
             .unwrap()
     }
 
-    pub fn insert_func(&mut self, func_name: &String, func: Function) {
+    pub fn insert_func(&mut self, func_name: &String, has_return: bool, params: &Vec<Vec<i32>>) {
         if self.func_table.contains_key(func_name) {
             panic!("redefinition of function!");
         }
-        self.func_table.insert(func_name.clone(), func);
+        self.func_table.insert(
+            func_name.clone(),
+            Function {
+                name: func_name.clone(),
+                has_return: has_return,
+                params: params.clone(),
+            },
+        );
     }
 
     pub fn insert_var(&mut self, var_name: &String, var: Variable) {
@@ -97,8 +68,26 @@ impl SymbolTable {
 }
 
 pub struct Function {
+    pub name: String,
     pub has_return: bool,
     pub params: Vec<Vec<i32>>,
+}
+
+impl Function {
+    pub fn get_definition(&self) -> String {
+        let mut params: Vec<String> = vec![];
+        for item in &self.params {
+            if item.is_empty() {
+                params.push(format!("i32 %x{}", params.len() + 1));
+            }
+        }
+        format!(
+            "define {} @{}({}) {{\n",
+            if self.has_return { "i32" } else { "void" },
+            self.name,
+            params.join(",")
+        )
+    }
 }
 
 pub struct Variable {
