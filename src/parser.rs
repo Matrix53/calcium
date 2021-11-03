@@ -86,7 +86,7 @@ impl<'a> Parser<'a> {
         let mut shape: Vec<i32> = Vec::new();
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            let dimension = atoi(&self.parse_add_exp(), 10);
+            let dimension = atoi(&self.parse_add_exp().unwrap(), 10);
             if dimension <= 0 {
                 panic!("syntax error!");
             } else {
@@ -136,7 +136,7 @@ impl<'a> Parser<'a> {
         let mut shape: Vec<i32> = Vec::new();
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            let dimension = atoi(&self.parse_add_exp(), 10);
+            let dimension = atoi(&self.parse_add_exp().unwrap(), 10);
             if dimension <= 0 {
                 panic!("syntax error!");
             } else {
@@ -176,7 +176,7 @@ impl<'a> Parser<'a> {
     fn parse_init_val(&mut self) -> HashMap<i32, String> {
         let mut res: HashMap<i32, String> = HashMap::new();
         if self.iter.clone().next().unwrap() != &Token::LBrace {
-            res.insert(0, self.parse_add_exp());
+            res.insert(0, self.parse_add_exp().unwrap());
             res
         } else {
             self.consume_token(Token::LBrace);
@@ -266,7 +266,7 @@ impl<'a> Parser<'a> {
                     }
                     self.add_block_ins("ret void".to_string());
                 } else {
-                    let ret_val = self.parse_add_exp();
+                    let ret_val = self.parse_add_exp().unwrap();
                     if !self.symbol.get_current_func().has_return {
                         panic!("return value mismatches!")
                     }
@@ -285,7 +285,7 @@ impl<'a> Parser<'a> {
                         self.consume_token(Token::Assign);
                         let rhs = self.parse_add_exp();
                         self.consume_token(Token::Semicolon);
-                        self.add_block_ins(format!("store i32 {}, i32* {}", rhs, lhs));
+                        self.add_block_ins(format!("store i32 {}, i32* {}", rhs.unwrap(), lhs));
                     }
                     Token::Semicolon => {
                         self.parse_add_exp();
@@ -332,9 +332,10 @@ impl<'a> Parser<'a> {
         self.symbol.get_var(name).reg.clone()
     }
 
-    fn parse_unary_exp(&mut self) -> String {
+    // TODO 剩余的逻辑
+    fn parse_unary_exp(&mut self) -> Option<String> {
         match self.iter.next().unwrap() {
-            Token::Number(num) => num.to_string(),
+            Token::Number(num) => Some(num.to_string()),
             Token::LParen => {
                 let ans = self.parse_add_exp();
                 self.consume_token(Token::RParen);
@@ -342,42 +343,67 @@ impl<'a> Parser<'a> {
             }
             Token::Plus => self.parse_unary_exp(),
             Token::Minus => {
-                let ans = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
-                (-ans).to_string()
+                let rhs = self.parse_unary_exp();
+                let lhs = self.assigner.new_var();
+                self.add_block_ins(format!("{} = sub i32 0, {}", lhs, rhs.unwrap()));
+                Some(lhs)
             }
-            Token::Ident(ident) => "".to_string(),
+            Token::Ident(ident) => {
+                if self.iter.clone().next().unwrap() == &Token::LParen {
+                    // 收集参数
+                    self.consume_token(Token::LParen);
+                    let params = match self.iter.clone().next().unwrap() {
+                        Token::RParen => Vec::new(),
+                        _ => self.parse_func_rparams(),
+                    };
+                    self.consume_token(Token::RParen);
+                    // 调用并返回
+                    Some("".to_string())
+                    // TODO 数组参数的处理
+                } else {
+                    Some(self.symbol.get_var(ident).reg.clone())
+                    // TODO 数组下标的逻辑
+                }
+            }
             _ => panic!("syntax error!"),
         }
     }
 
-    fn parse_func_rparams(&mut self) -> String {
-        " ".to_string()
+    // TODO 参数类型检查, 利用get_current_func
+    fn parse_func_rparams(&mut self) -> Vec<String> {
+        let mut res: Vec<String> = vec![];
+        res.push(self.parse_add_exp().unwrap());
+        while self.iter.clone().next().unwrap() == &Token::Comma {
+            self.consume_token(Token::Comma);
+            res.push(self.parse_add_exp().unwrap())
+        }
+        res
     }
 
-    fn parse_mul_exp(&mut self) -> String {
+    fn parse_mul_exp(&mut self) -> Option<String> {
         let mut operand = self.parse_unary_exp();
         loop {
             match self.iter.clone().next() {
                 Some(Token::Multiply) => {
                     self.consume_token(Token::Multiply);
-                    let tmp = self.parse_unary_exp();
+                    let tmp = self.parse_unary_exp().unwrap();
                     let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = mul i32 {}, {}", reg, operand, tmp));
-                    operand = reg;
+                    self.add_block_ins(format!("{} = mul i32 {}, {}", reg, operand.unwrap(), tmp));
+                    operand = Some(reg);
                 }
                 Some(Token::Divide) => {
                     self.consume_token(Token::Divide);
-                    let tmp = self.parse_unary_exp();
+                    let tmp = self.parse_unary_exp().unwrap();
                     let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = sdiv i32 {}, {}", reg, operand, tmp));
-                    operand = reg;
+                    self.add_block_ins(format!("{} = sdiv i32 {}, {}", reg, operand.unwrap(), tmp));
+                    operand = Some(reg);
                 }
                 Some(Token::Mod) => {
                     self.consume_token(Token::Mod);
-                    let tmp = self.parse_unary_exp();
+                    let tmp = self.parse_unary_exp().unwrap();
                     let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = srem i32 {}, {}", reg, operand, tmp));
-                    operand = reg;
+                    self.add_block_ins(format!("{} = srem i32 {}, {}", reg, operand.unwrap(), tmp));
+                    operand = Some(reg);
                 }
                 _ => break,
             }
@@ -385,23 +411,23 @@ impl<'a> Parser<'a> {
         operand
     }
 
-    fn parse_add_exp(&mut self) -> String {
+    fn parse_add_exp(&mut self) -> Option<String> {
         let mut operand = self.parse_mul_exp();
         loop {
             match self.iter.clone().next() {
                 Some(Token::Plus) => {
                     self.consume_token(Token::Plus);
-                    let tmp = self.parse_mul_exp();
+                    let tmp = self.parse_mul_exp().unwrap();
                     let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = add i32 {}, {}", reg, operand, tmp));
-                    operand = reg;
+                    self.add_block_ins(format!("{} = add i32 {}, {}", reg, operand.unwrap(), tmp));
+                    operand = Some(reg);
                 }
                 Some(Token::Minus) => {
                     self.consume_token(Token::Minus);
-                    let tmp = self.parse_mul_exp();
+                    let tmp = self.parse_mul_exp().unwrap();
                     let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = sub i32 {}, {}", reg, operand, tmp));
-                    operand = reg;
+                    self.add_block_ins(format!("{} = sub i32 {}, {}", reg, operand.unwrap(), tmp));
+                    operand = Some(reg);
                 }
                 _ => break,
             }
