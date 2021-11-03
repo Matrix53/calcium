@@ -273,11 +273,52 @@ impl<'a> Parser<'a> {
                     self.add_block_ins(format!("ret i32 {}", ret_val));
                 }
             }
-            // TODO stmt
-            _ => panic!("syntax error!"),
+            Token::Ident(ident) => {
+                match self
+                    .iter
+                    .clone()
+                    .find(|&item| item == &Token::Assign || item == &Token::Semicolon)
+                    .unwrap()
+                {
+                    Token::Assign => {
+                        let lhs = self.parse_lval();
+                        self.consume_token(Token::Assign);
+                        let rhs = self.parse_add_exp();
+                        self.consume_token(Token::Semicolon);
+                        self.add_block_ins(format!("store i32 {}, i32* {}", rhs, lhs));
+                    }
+                    Token::Semicolon => {
+                        self.parse_add_exp();
+                        self.consume_token(Token::Semicolon);
+                    }
+                    _ => panic!("bug occurs, unreachable code!"),
+                }
+            }
+            Token::LBrace => {
+                panic!("lab hasn't finished!")
+            }
+            Token::If => {
+                panic!("lab hasn't finished!")
+            }
+            Token::While => {
+                panic!("lab hasn't finished!")
+            }
+            Token::Break => {
+                panic!("lab hasn't finished!")
+            }
+            Token::Continue => {
+                panic!("lab hasn't finished!")
+            }
+            _ => {
+                if self.iter.clone().next().unwrap() != &Token::Semicolon {
+                    self.parse_add_exp();
+                }
+                self.consume_token(Token::Semicolon);
+            }
         }
     }
 
+    // TODO
     fn parse_lval(&mut self) -> String {
         " ".to_string()
     }
