@@ -318,9 +318,18 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // TODO
     fn parse_lval(&mut self) -> String {
-        " ".to_string()
+        let name = match self.iter.next().unwrap() {
+            Token::Ident(ident) => ident,
+            _ => panic!("syntax error!"),
+        };
+        if self.iter.clone().next().unwrap() == &Token::LBracket {
+            // TODO 数组下标解析
+            self.consume_token(Token::LBracket);
+            self.consume_token(Token::RBracket);
+            panic!("syntax error!")
+        }
+        self.symbol.get_var(name).reg.clone()
     }
 
     fn parse_unary_exp(&mut self) -> String {
@@ -336,6 +345,7 @@ impl<'a> Parser<'a> {
                 let ans = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
                 (-ans).to_string()
             }
+            Token::Ident(ident) => "".to_string(),
             _ => panic!("syntax error!"),
         }
     }
@@ -345,48 +355,58 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_mul_exp(&mut self) -> String {
-        let mut operand = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
+        let mut operand = self.parse_unary_exp();
         loop {
             match self.iter.clone().next() {
                 Some(Token::Multiply) => {
-                    self.iter.next();
-                    let tmp = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
-                    operand *= tmp;
+                    self.consume_token(Token::Multiply);
+                    let tmp = self.parse_unary_exp();
+                    let reg = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = mul i32 {}, {}", reg, operand, tmp));
+                    operand = reg;
                 }
                 Some(Token::Divide) => {
-                    self.iter.next();
-                    let tmp = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
-                    operand /= tmp;
+                    self.consume_token(Token::Divide);
+                    let tmp = self.parse_unary_exp();
+                    let reg = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = sdiv i32 {}, {}", reg, operand, tmp));
+                    operand = reg;
                 }
                 Some(Token::Mod) => {
-                    self.iter.next();
-                    let tmp = i32::from_str_radix(self.parse_unary_exp().as_str(), 10).unwrap();
-                    operand %= tmp;
+                    self.consume_token(Token::Mod);
+                    let tmp = self.parse_unary_exp();
+                    let reg = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = srem i32 {}, {}", reg, operand, tmp));
+                    operand = reg;
                 }
                 _ => break,
             }
         }
-        format!("{}", operand)
+        operand
     }
 
     fn parse_add_exp(&mut self) -> String {
-        let mut operand = i32::from_str_radix(self.parse_mul_exp().as_str(), 10).unwrap();
+        let mut operand = self.parse_mul_exp();
         loop {
             match self.iter.clone().next() {
                 Some(Token::Plus) => {
-                    self.iter.next();
-                    let tmp = i32::from_str_radix(self.parse_mul_exp().as_str(), 10).unwrap();
-                    operand += tmp;
+                    self.consume_token(Token::Plus);
+                    let tmp = self.parse_mul_exp();
+                    let reg = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = add i32 {}, {}", reg, operand, tmp));
+                    operand = reg;
                 }
                 Some(Token::Minus) => {
-                    self.iter.next();
-                    let tmp = i32::from_str_radix(self.parse_mul_exp().as_str(), 10).unwrap();
-                    operand -= tmp;
+                    self.consume_token(Token::Minus);
+                    let tmp = self.parse_mul_exp();
+                    let reg = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = sub i32 {}, {}", reg, operand, tmp));
+                    operand = reg;
                 }
                 _ => break,
             }
         }
-        format!("{}", operand)
+        operand
     }
 
     fn parse_rel_exp(&mut self) -> String {
