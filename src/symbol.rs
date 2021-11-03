@@ -57,20 +57,25 @@ impl SymbolTable {
             func_name.clone(),
             Function {
                 name: func_name.clone(),
-                has_return: has_return,
+                has_return,
                 params: params.clone(),
             },
         );
     }
 
-    pub fn insert_var(&mut self, var_name: &String, var: Variable) {
+    pub fn insert_var(&mut self, var_name: &String, is_const: bool, shape: &Vec<i32>, value: i32) {
         if self.var_table.front().unwrap().contains_key(var_name) {
             panic!("redefinition of variable!");
         }
-        self.var_table
-            .front_mut()
-            .unwrap()
-            .insert(var_name.clone(), var);
+        self.var_table.front_mut().unwrap().insert(
+            var_name.clone(),
+            Variable {
+                name: var_name.clone(),
+                is_const,
+                shape: shape.clone(),
+                value,
+            },
+        );
     }
 }
 
