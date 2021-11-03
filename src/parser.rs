@@ -358,7 +358,20 @@ impl<'a> Parser<'a> {
                     };
                     self.consume_token(Token::RParen);
                     // 调用并返回
-                    Some("".to_string())
+                    if self.symbol.get_current_func().has_return {
+                        let reg = self.assigner.new_var();
+                        self.add_block_ins(format!(
+                            "{} = {}",
+                            reg,
+                            self.symbol.get_current_func().get_call_instruction(&params)
+                        ));
+                        Some(reg)
+                    } else {
+                        self.add_block_ins(
+                            self.symbol.get_current_func().get_call_instruction(&params),
+                        );
+                        None
+                    }
                     // TODO 数组参数的处理
                 } else {
                     Some(self.symbol.get_var(ident).reg.clone())

@@ -114,6 +114,10 @@ impl Function {
             params.join(",")
         )
     }
+
+    pub fn get_call_instruction(&self, param: &Vec<String>) -> String {
+        "".to_string()
+    }
 }
 
 pub struct Variable {
