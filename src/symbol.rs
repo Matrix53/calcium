@@ -21,11 +21,18 @@ impl SymbolTable {
         table
     }
 
+    pub fn is_global(&self) -> bool {
+        self.var_table.len() == 1
+    }
+
     pub fn go_down(&mut self) {
         self.var_table.push_front(HashMap::new());
     }
 
     pub fn go_up(&mut self) {
+        if self.var_table.is_empty() {
+            panic!("bug occurs!")
+        }
         self.var_table.pop_front();
     }
 

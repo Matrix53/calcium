@@ -8,8 +8,9 @@ pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     symbol: SymbolTable,
     assigner: Assigner,
-    pre_code: String,   // alloca部分，递归过程中添加代码
-    block_code: String, // 基本块部分，递归过程中添加代码
+    pre_code: String,    // alloca部分，递归过程中添加代码
+    block_code: String,  // 基本块部分，递归过程中添加代码
+    global_code: String, // 全局变量部分，递归过程中添加代码，其实可以综合成Code类
 }
 
 impl<'a> Parser<'a> {
@@ -39,42 +40,32 @@ impl<'a> Parser<'a> {
             assigner: Assigner::new(),
             pre_code: String::new(),
             block_code: String::new(),
+            global_code: String::new(),
         };
         parser.parse_comp_unit()
     }
 
     fn parse_comp_unit(&mut self) -> String {
-        let mut res = String::from("");
+        let mut func_code = String::from("");
         while self.iter.clone().next() != None {
-            res += match self.iter.clone().nth(2).unwrap() {
-                Token::LParen => self.parse_func_def(),
-                _ => self.parse_decl(),
+            if self.iter.clone().nth(2).unwrap() == &Token::LParen {
+                func_code += self.parse_func_def().as_str();
+            } else {
+                self.parse_decl();
             }
-            .as_str()
         }
-        res
+        self.global_code.clone() + func_code.as_str()
     }
 
-    fn parse_decl(&mut self) -> String {
-        panic!("syntax error!");
-        " ".to_string()
-    }
+    fn parse_decl(&mut self) {}
 
-    fn parse_const_decl(&mut self) -> String {
-        " ".to_string()
-    }
+    fn parse_const_decl(&mut self) {}
 
-    fn parse_const_def(&mut self) -> String {
-        " ".to_string()
-    }
+    fn parse_const_def(&mut self) {}
 
-    fn parse_const_init_val(&mut self) -> String {
-        " ".to_string()
-    }
+    fn parse_const_init_val(&mut self) {}
 
-    fn parse_var_decl(&mut self) -> String {
-        " ".to_string()
-    }
+    fn parse_var_decl(&mut self) {}
 
     fn parse_var_def(&mut self) -> String {
         " ".to_string()
