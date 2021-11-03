@@ -103,13 +103,13 @@ impl<'a> Parser<'a> {
         } else {
             if shape.is_empty() {
                 let reg = self.assigner.new_pre_var();
-                self.symbol.insert_var(
-                    &name,
-                    &reg,
-                    true,
-                    &shape,
-                    atoi(&init_val.get(&0).unwrap(), 10),
-                );
+                self.symbol.insert_var(&name, &reg, true, &shape, 0);
+                self.add_pre_ins(format!("{} = alloca i32", reg));
+                self.add_block_ins(format!(
+                    "store i32 {}, i32* {}",
+                    init_val.get(&0).unwrap(),
+                    reg
+                ));
             } else {
                 // TODO 数组
             }
@@ -126,12 +126,72 @@ impl<'a> Parser<'a> {
         self.consume_token(Token::Semicolon);
     }
 
-    fn parse_var_def(&mut self) -> String {
-        " ".to_string()
+    fn parse_var_def(&mut self) {
+        // 标识符
+        let name = match self.iter.next().unwrap() {
+            Token::Ident(ident) => ident,
+            _ => panic!("syntax error!"),
+        };
+        // 形状
+        let mut shape: Vec<i32> = Vec::new();
+        while self.iter.clone().next().unwrap() == &Token::LBracket {
+            self.consume_token(Token::LBracket);
+            let dimension = atoi(&self.parse_add_exp(), 10);
+            if dimension <= 0 {
+                panic!("syntax error!");
+            } else {
+                shape.push(dimension);
+            }
+            self.consume_token(Token::RBracket);
+        }
+        // 初始值
+        let init_val = match self.iter.clone().next().unwrap() {
+            Token::Assign => {
+                self.consume_token(Token::Assign);
+                self.parse_init_val()
+            }
+            _ => HashMap::new(),
+        };
+        // 逻辑处理
+        if self.symbol.is_global() {
+            // TODO 全局
+        } else {
+            if shape.is_empty() {
+                let reg = self.assigner.new_pre_var();
+                self.symbol.insert_var(&name, &reg, false, &shape, 0);
+                self.add_pre_ins(format!("{} = alloca i32", reg));
+                if !init_val.is_empty() {
+                    self.add_block_ins(format!(
+                        "store i32 {}, i32* {}",
+                        init_val.get(&0).unwrap(),
+                        reg
+                    ));
+                }
+            } else {
+                // TODO 数组
+            }
+        }
     }
 
     fn parse_init_val(&mut self) -> HashMap<i32, String> {
-        HashMap::new()
+        let mut res: HashMap<i32, String> = HashMap::new();
+        if self.iter.clone().next().unwrap() != &Token::LBrace {
+            res.insert(0, self.parse_add_exp());
+            res
+        } else {
+            self.consume_token(Token::LBrace);
+            if self.iter.clone().next().unwrap() != &Token::RBrace {
+                let mut son = self.parse_init_val();
+                // TODO 数组下标转换
+                while self.iter.clone().next().unwrap() == &Token::Comma {
+                    self.consume_token(Token::Comma);
+                    son = self.parse_init_val();
+                    // TODO 数组下标转换
+                }
+            }
+            self.consume_token(Token::RBrace);
+            res
+        }
     }
 
     fn parse_func_def(&mut self) -> String {
@@ -158,7 +218,10 @@ impl<'a> Parser<'a> {
         self.pre_code.clear();
         self.block_code.clear();
         // 翻译并返回
+        self.block_code.push_str("b_1:\n");
+        self.assigner.go_next_block();
         self.parse_block();
+        self.add_pre_ins("br label b_1".to_string());
         self.symbol.get_func(func_name).get_definition()
             + self.pre_code.as_str()
             + self.block_code.as_str()
@@ -173,24 +236,46 @@ impl<'a> Parser<'a> {
         " ".to_string()
     }
 
-    fn parse_block(&mut self) -> String {
+    fn parse_block(&mut self) {
         self.symbol.go_down();
         self.consume_token(Token::LBrace);
-        let stmts = self.parse_stmt();
+        while self.iter.clone().next().unwrap() != &Token::RBrace {
+            self.parse_block_item();
+        }
         self.consume_token(Token::RBrace);
         self.symbol.go_up();
-        stmts
     }
 
-    fn parse_block_item(&mut self) -> String {
-        " ".to_string()
+    fn parse_block_item(&mut self) {
+        let next = self.iter.clone().next().unwrap();
+        if next == &Token::Const || next == &Token::Int {
+            self.parse_decl();
+        } else {
+            self.parse_stmt();
+        }
     }
 
-    fn parse_stmt(&mut self) -> String {
-        self.consume_token(Token::Return);
-        let number = self.parse_add_exp();
-        self.consume_token(Token::Semicolon);
-        format!("    ret i32 {}", number)
+    fn parse_stmt(&mut self) {
+        match self.iter.clone().next().unwrap() {
+            Token::Return => {
+                self.consume_token(Token::Return);
+                if self.iter.clone().next().unwrap() == &Token::Semicolon {
+                    self.consume_token(Token::Semicolon);
+                    if self.symbol.get_current_func().has_return {
+                        panic!("return value mismatches!")
+                    }
+                    self.add_block_ins("ret void".to_string());
+                } else {
+                    let ret_val = self.parse_add_exp();
+                    if !self.symbol.get_current_func().has_return {
+                        panic!("return value mismatches!")
+                    }
+                    self.add_block_ins(format!("ret i32 {}", ret_val));
+                }
+            }
+            // TODO stmt
+            _ => panic!("syntax error!"),
+        }
     }
 
     fn parse_lval(&mut self) -> String {

@@ -3,6 +3,7 @@ use std::collections::{HashMap, LinkedList};
 pub struct SymbolTable {
     func_table: HashMap<String, Function>,
     var_table: LinkedList<HashMap<String, Variable>>,
+    current_func: String,
 }
 
 impl SymbolTable {
@@ -10,6 +11,7 @@ impl SymbolTable {
         let mut table = SymbolTable {
             func_table: HashMap::new(),
             var_table: LinkedList::new(),
+            current_func: String::from(""),
         };
         table.insert_func(&"getint".to_string(), true, &vec![]);
         table.insert_func(&"getch".to_string(), true, &vec![]);
@@ -23,6 +25,10 @@ impl SymbolTable {
 
     pub fn is_global(&self) -> bool {
         self.var_table.len() == 1
+    }
+
+    pub fn get_current_func(&self) -> &Function {
+        self.get_func(&self.current_func)
     }
 
     pub fn go_down(&mut self) {
@@ -53,6 +59,7 @@ impl SymbolTable {
         if self.func_table.contains_key(func_name) {
             panic!("redefinition of function!");
         }
+        self.current_func = func_name.clone();
         self.func_table.insert(
             func_name.clone(),
             Function {
