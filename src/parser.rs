@@ -57,15 +57,35 @@ impl<'a> Parser<'a> {
         self.global_code.clone() + func_code.as_str()
     }
 
-    fn parse_decl(&mut self) {}
+    fn parse_decl(&mut self) {
+        match self.iter.clone().next().unwrap() {
+            Token::Const => self.parse_const_decl(),
+            _ => self.parse_var_decl(),
+        }
+    }
 
-    fn parse_const_decl(&mut self) {}
+    fn parse_const_decl(&mut self) {
+        self.consume_token(Token::Const);
+        self.consume_token(Token::Int);
+        self.parse_const_def();
+        while self.iter.clone().next().unwrap() == &Token::Comma {
+            self.consume_token(Token::Comma);
+            self.parse_const_def();
+        }
+        self.consume_token(Token::Semicolon);
+    }
 
     fn parse_const_def(&mut self) {}
 
-    fn parse_const_init_val(&mut self) {}
-
-    fn parse_var_decl(&mut self) {}
+    fn parse_var_decl(&mut self) {
+        self.consume_token(Token::Int);
+        self.parse_var_def();
+        while self.iter.clone().next().unwrap() == &Token::Comma {
+            self.consume_token(Token::Comma);
+            self.parse_var_def();
+        }
+        self.consume_token(Token::Semicolon);
+    }
 
     fn parse_var_def(&mut self) -> String {
         " ".to_string()
@@ -217,10 +237,6 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_or_exp(&mut self) -> String {
-        " ".to_string()
-    }
-
-    fn parse_const_exp(&mut self) -> String {
         " ".to_string()
     }
 }

@@ -101,4 +101,5 @@ pub struct Variable {
     pub is_const: bool,
     pub name: String,
     pub shape: Vec<i32>,
+    pub value: i32,
 }
