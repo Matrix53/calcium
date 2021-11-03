@@ -331,6 +331,9 @@ impl<'a> Parser<'a> {
             Token::Ident(ident) => ident,
             _ => panic!("syntax error!"),
         };
+        if self.symbol.get_var(name).is_const {
+            panic!("lval can't be assigned!")
+        }
         if self.iter.clone().next().unwrap() == &Token::LBracket {
             // TODO 数组下标解析
             self.consume_token(Token::LBracket);
@@ -382,7 +385,10 @@ impl<'a> Parser<'a> {
                     }
                     // TODO 数组参数的处理
                 } else {
-                    Some(self.symbol.get_var(ident).reg.clone())
+                    let var = self.assigner.new_var();
+                    let reg = self.symbol.get_var(ident).reg.clone();
+                    self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
+                    Some(var)
                     // TODO 数组下标的逻辑
                 }
             }
