@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::{linked_list::Iter, LinkedList};
 
 use super::assigner::Assigner;
@@ -75,7 +76,45 @@ impl<'a> Parser<'a> {
         self.consume_token(Token::Semicolon);
     }
 
-    fn parse_const_def(&mut self) {}
+    fn parse_const_def(&mut self) {
+        // 标识符
+        let name = match self.iter.next().unwrap() {
+            Token::Ident(ident) => ident,
+            _ => panic!("syntax error!"),
+        };
+        // 形状
+        let mut shape: Vec<i32> = Vec::new();
+        while self.iter.clone().next().unwrap() == &Token::LBracket {
+            self.consume_token(Token::LBracket);
+            let dimension = atoi(&self.parse_add_exp(), 10);
+            if dimension <= 0 {
+                panic!("syntax error!");
+            } else {
+                shape.push(dimension);
+            }
+            self.consume_token(Token::RBracket);
+        }
+        // 初始值
+        self.consume_token(Token::Assign);
+        let init_val = self.parse_init_val();
+        // 逻辑处理
+        if self.symbol.is_global() {
+            // TODO 全局
+        } else {
+            if shape.is_empty() {
+                let reg = self.assigner.new_pre_var();
+                self.symbol.insert_var(
+                    &name,
+                    &reg,
+                    true,
+                    &shape,
+                    atoi(&init_val.get(&0).unwrap(), 10),
+                );
+            } else {
+                // TODO 数组
+            }
+        }
+    }
 
     fn parse_var_decl(&mut self) {
         self.consume_token(Token::Int);
@@ -91,8 +130,8 @@ impl<'a> Parser<'a> {
         " ".to_string()
     }
 
-    fn parse_init_val(&mut self) -> String {
-        " ".to_string()
+    fn parse_init_val(&mut self) -> HashMap<i32, String> {
+        HashMap::new()
     }
 
     fn parse_func_def(&mut self) -> String {
@@ -239,4 +278,12 @@ impl<'a> Parser<'a> {
     fn parse_or_exp(&mut self) -> String {
         " ".to_string()
     }
+}
+
+fn atoi(str: &String, radix: u32) -> i32 {
+    i32::from_str_radix(str.as_str(), radix).unwrap()
+}
+
+fn itoa(int: i32) -> String {
+    int.to_string()
 }

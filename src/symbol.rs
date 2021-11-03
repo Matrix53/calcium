@@ -63,14 +63,21 @@ impl SymbolTable {
         );
     }
 
-    pub fn insert_var(&mut self, var_name: &String, is_const: bool, shape: &Vec<i32>, value: i32) {
-        if self.var_table.front().unwrap().contains_key(var_name) {
+    pub fn insert_var(
+        &mut self,
+        name: &String,
+        reg: &String,
+        is_const: bool,
+        shape: &Vec<i32>,
+        value: i32,
+    ) {
+        if self.var_table.front().unwrap().contains_key(name) {
             panic!("redefinition of variable!");
         }
         self.var_table.front_mut().unwrap().insert(
-            var_name.clone(),
+            name.clone(),
             Variable {
-                name: var_name.clone(),
+                reg: reg.clone(),
                 is_const,
                 shape: shape.clone(),
                 value,
@@ -104,7 +111,7 @@ impl Function {
 
 pub struct Variable {
     pub is_const: bool,
-    pub name: String,
+    pub reg: String,
     pub shape: Vec<i32>,
     pub value: i32,
 }
