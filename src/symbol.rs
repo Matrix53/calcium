@@ -111,12 +111,28 @@ impl Function {
             "define {} @{}({}) {{\n",
             if self.has_return { "i32" } else { "void" },
             self.name,
-            params.join(",")
+            params.join(", ")
         )
     }
 
     pub fn get_call_instruction(&self, param: &Vec<String>) -> String {
-        "".to_string()
+        let mut params: Vec<String> = vec![];
+        if self.params.len() != param.len() {
+            println!("{} {}", self.params.len(), param.len());
+            panic!("param count mismatches!");
+        }
+        for index in 0..param.len() {
+            if self.params[index].is_empty() {
+                params.push(format!("i32 {}", param[index]));
+            }
+            // TODO 对数组的处理
+        }
+        format!(
+            "call {} @{}({})",
+            if self.has_return { "i32" } else { "void" },
+            self.name,
+            params.join(", ")
+        )
     }
 }
 

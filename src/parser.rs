@@ -55,7 +55,15 @@ impl<'a> Parser<'a> {
                 self.parse_decl();
             }
         }
-        self.global_code.clone() + func_code.as_str()
+        String::from(
+            "declare i32 @getint()\n\
+        declare i32 @getch()\n\
+        declare i32 @getarray(i32*)\n\
+        declare void @putch(i32)\n\
+        declare void @putint(i32)\n\
+        declare void @putarray(i32, i32*)\n\n",
+        ) + self.global_code.clone().as_str()
+            + func_code.as_str()
     }
 
     fn parse_decl(&mut self) {
@@ -221,11 +229,11 @@ impl<'a> Parser<'a> {
         self.block_code.push_str("b_1:\n");
         self.assigner.go_next_block();
         self.parse_block();
-        self.add_pre_ins("br label b_1".to_string());
+        self.add_pre_ins("br label %b_1".to_string());
         self.symbol.get_func(func_name).get_definition()
             + self.pre_code.as_str()
             + self.block_code.as_str()
-            + "}}\n"
+            + "}\n"
     }
 
     fn parse_func_fparams(&mut self) -> Vec<Vec<i32>> {
@@ -358,17 +366,17 @@ impl<'a> Parser<'a> {
                     };
                     self.consume_token(Token::RParen);
                     // 调用并返回
-                    if self.symbol.get_current_func().has_return {
+                    if self.symbol.get_func(ident).has_return {
                         let reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = {}",
                             reg,
-                            self.symbol.get_current_func().get_call_instruction(&params)
+                            self.symbol.get_func(ident).get_call_instruction(&params)
                         ));
                         Some(reg)
                     } else {
                         self.add_block_ins(
-                            self.symbol.get_current_func().get_call_instruction(&params),
+                            self.symbol.get_func(ident).get_call_instruction(&params),
                         );
                         None
                     }
