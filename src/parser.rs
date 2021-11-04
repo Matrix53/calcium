@@ -11,7 +11,7 @@ pub struct Parser<'a> {
     assigner: Assigner,
     pre_code: String,    // alloca部分，递归过程中添加代码
     block_code: String,  // 基本块部分，递归过程中添加代码
-    global_code: String, // 全局变量部分，递归过程中添加代码，其实可以综合成Code类
+    global_code: String, // 全局变量部分，递归过程中添加代码，其实可以综合成Code类，不过这样得小重构一波
 }
 
 impl<'a> Parser<'a> {
@@ -105,9 +105,19 @@ impl<'a> Parser<'a> {
         // 初始值
         self.consume_token(Token::Assign);
         let init_val = self.parse_const_init_val();
-        // 逻辑处理
+        // 逻辑处理，分为全局和局部
         if self.symbol.is_global() {
-            // TODO 全局
+            if shape.is_empty() {
+                self.symbol.insert_var(
+                    &name,
+                    &format!("@{}", name),
+                    true,
+                    &shape,
+                    atoi(init_val.get(&0).unwrap(), 10),
+                );
+            } else {
+                // TODO 数组
+            }
         } else {
             if shape.is_empty() {
                 let reg = self.assigner.new_pre_var();
@@ -181,9 +191,19 @@ impl<'a> Parser<'a> {
             }
             _ => HashMap::new(),
         };
-        // 逻辑处理
+        // 逻辑处理，分为全局和局部
         if self.symbol.is_global() {
-            // TODO 全局
+            if shape.is_empty() {
+                self.symbol.insert_var(
+                    &name,
+                    &format!("@{}", name),
+                    false,
+                    &shape,
+                    atoi(init_val.get(&0).unwrap(), 10),
+                );
+            } else {
+                // TODO 数组
+            }
         } else {
             if shape.is_empty() {
                 let reg = self.assigner.new_pre_var();
@@ -433,6 +453,7 @@ impl<'a> Parser<'a> {
                 Some(operand)
             }
             Token::Ident(ident) => {
+                // 函数调用和普通表达式计算
                 if self.iter.clone().next().unwrap() == &Token::LParen {
                     // 收集参数
                     self.consume_token(Token::LParen);
