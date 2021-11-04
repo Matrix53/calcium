@@ -327,7 +327,37 @@ impl<'a> Parser<'a> {
                 self.parse_block();
             }
             Token::If => {
-                panic!("lab hasn't finished!")
+                // 计算条件变量
+                self.consume_token(Token::If);
+                self.consume_token(Token::LParen);
+                let cond = self.parse_or_exp();
+                self.consume_token(Token::RParen);
+                // 跳转逻辑，跳转到子块
+                let next_block = self.assigner.get_next_block();
+                let sub_block = self.assigner.get_sub_block();
+                self.add_block_ins(format!(
+                    "br i1 {}, label %{}, label %{}",
+                    cond, sub_block, next_block
+                ));
+                self.block_code += format!("{}:\n", sub_block).as_str();
+                self.assigner.go_sub_block();
+                // 解析子块
+                self.parse_stmt();
+                // 跳转逻辑，跳转到下一块
+                self.add_block_ins(format!("br label %{}", next_block));
+                self.block_code += format!("{}:\n", next_block).as_str();
+                self.assigner.go_parent_block();
+                self.assigner.go_next_block();
+                // 解析可选的Else部分
+                if self.iter.clone().next().unwrap() == &Token::Else {
+                    self.consume_token(Token::Else);
+                    self.parse_stmt();
+                    // 跳转到下一块
+                    let next_block = self.assigner.get_next_block();
+                    self.assigner.go_next_block();
+                    self.add_block_ins(format!("br label %{}", next_block));
+                    self.block_code += format!("{}:\n", next_block).as_str();
+                }
             }
             Token::While => {
                 panic!("lab hasn't finished!")
@@ -593,7 +623,7 @@ impl<'a> Parser<'a> {
             }
         }
         let var = self.assigner.new_var();
-        self.add_block_ins(format!("{} = zext i32 {} to i1", var, operand));
+        self.add_block_ins(format!("{} = icmp ne i32 {}, 0", var, operand));
         operand = var;
         operand
     }
