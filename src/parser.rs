@@ -324,7 +324,7 @@ impl<'a> Parser<'a> {
                 }
             }
             Token::LBrace => {
-                panic!("lab hasn't finished!")
+                self.parse_block();
             }
             Token::If => {
                 panic!("lab hasn't finished!")
@@ -379,6 +379,23 @@ impl<'a> Parser<'a> {
                 let lhs = self.assigner.new_var();
                 self.add_block_ins(format!("{} = sub i32 0, {}", lhs, rhs.unwrap()));
                 Some(lhs)
+            }
+            Token::Not => {
+                // 比较
+                let mut operand = self.parse_unary_exp(is_const).unwrap();
+                let mut var = self.assigner.new_var();
+                self.add_block_ins(format!("{} = icmp ne i32 {}, 0", var, operand));
+                operand = var;
+                // 取反
+                var = self.assigner.new_var();
+                self.add_block_ins(format!("{} = xor i1 {}, true", var, operand));
+                operand = var;
+                // 类型转换
+                var = self.assigner.new_var();
+                self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                operand = var;
+                // 返回
+                Some(operand)
             }
             Token::Ident(ident) => {
                 if self.iter.clone().next().unwrap() == &Token::LParen {
@@ -495,7 +512,7 @@ impl<'a> Parser<'a> {
                     // 计算
                     let mut var = self.assigner.new_var();
                     let tmp = self.parse_rel_exp();
-                    self.add_block_ins(format!("{} = icmp eq i32 {}, {}", var, operand, tmp));
+                    self.add_block_ins(format!("{} = icmp slt i32 {}, {}", var, operand, tmp));
                     operand = var;
                     // 类型转换
                     var = self.assigner.new_var();
@@ -507,7 +524,7 @@ impl<'a> Parser<'a> {
                     // 计算
                     let mut var = self.assigner.new_var();
                     let tmp = self.parse_rel_exp();
-                    self.add_block_ins(format!("{} = icmp ne i32 {}, {}", var, operand, tmp));
+                    self.add_block_ins(format!("{} = icmp sgt i32 {}, {}", var, operand, tmp));
                     operand = var;
                     // 类型转换
                     var = self.assigner.new_var();
@@ -519,7 +536,7 @@ impl<'a> Parser<'a> {
                     // 计算
                     let mut var = self.assigner.new_var();
                     let tmp = self.parse_rel_exp();
-                    self.add_block_ins(format!("{} = icmp eq i32 {}, {}", var, operand, tmp));
+                    self.add_block_ins(format!("{} = icmp sle i32 {}, {}", var, operand, tmp));
                     operand = var;
                     // 类型转换
                     var = self.assigner.new_var();
@@ -531,7 +548,7 @@ impl<'a> Parser<'a> {
                     // 计算
                     let mut var = self.assigner.new_var();
                     let tmp = self.parse_rel_exp();
-                    self.add_block_ins(format!("{} = icmp ne i32 {}, {}", var, operand, tmp));
+                    self.add_block_ins(format!("{} = icmp sge i32 {}, {}", var, operand, tmp));
                     operand = var;
                     // 类型转换
                     var = self.assigner.new_var();
