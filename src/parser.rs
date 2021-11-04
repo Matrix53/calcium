@@ -487,19 +487,122 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_rel_exp(&mut self) -> String {
-        " ".to_string()
+        let mut operand = self.parse_add_exp(false).unwrap();
+        loop {
+            match self.iter.clone().next().unwrap() {
+                Token::Less => {
+                    self.consume_token(Token::Less);
+                    // 计算
+                    let mut var = self.assigner.new_var();
+                    let tmp = self.parse_rel_exp();
+                    self.add_block_ins(format!("{} = icmp eq i32 {}, {}", var, operand, tmp));
+                    operand = var;
+                    // 类型转换
+                    var = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                    operand = var;
+                }
+                Token::Greater => {
+                    self.consume_token(Token::Greater);
+                    // 计算
+                    let mut var = self.assigner.new_var();
+                    let tmp = self.parse_rel_exp();
+                    self.add_block_ins(format!("{} = icmp ne i32 {}, {}", var, operand, tmp));
+                    operand = var;
+                    // 类型转换
+                    var = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                    operand = var;
+                }
+                Token::LessOrEqual => {
+                    self.consume_token(Token::LessOrEqual);
+                    // 计算
+                    let mut var = self.assigner.new_var();
+                    let tmp = self.parse_rel_exp();
+                    self.add_block_ins(format!("{} = icmp eq i32 {}, {}", var, operand, tmp));
+                    operand = var;
+                    // 类型转换
+                    var = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                    operand = var;
+                }
+                Token::GreaterOrEqual => {
+                    self.consume_token(Token::GreaterOrEqual);
+                    // 计算
+                    let mut var = self.assigner.new_var();
+                    let tmp = self.parse_rel_exp();
+                    self.add_block_ins(format!("{} = icmp ne i32 {}, {}", var, operand, tmp));
+                    operand = var;
+                    // 类型转换
+                    var = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                    operand = var;
+                }
+                _ => break,
+            }
+        }
+        operand
     }
 
     fn parse_eq_exp(&mut self) -> String {
-        " ".to_string()
+        let mut operand = self.parse_rel_exp();
+        loop {
+            match self.iter.clone().next().unwrap() {
+                Token::Equal => {
+                    self.consume_token(Token::Equal);
+                    // 计算
+                    let mut var = self.assigner.new_var();
+                    let tmp = self.parse_rel_exp();
+                    self.add_block_ins(format!("{} = icmp eq i32 {}, {}", var, operand, tmp));
+                    operand = var;
+                    // 类型转换
+                    var = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                    operand = var;
+                }
+                Token::NotEqual => {
+                    self.consume_token(Token::NotEqual);
+                    // 计算
+                    let mut var = self.assigner.new_var();
+                    let tmp = self.parse_rel_exp();
+                    self.add_block_ins(format!("{} = icmp ne i32 {}, {}", var, operand, tmp));
+                    operand = var;
+                    // 类型转换
+                    var = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
+                    operand = var;
+                }
+                _ => break,
+            }
+        }
+        let var = self.assigner.new_var();
+        self.add_block_ins(format!("{} = zext i32 {} to i1", var, operand));
+        operand = var;
+        operand
     }
 
     fn parse_and_exp(&mut self) -> String {
-        " ".to_string()
+        let mut operand = self.parse_eq_exp();
+        while self.iter.clone().next().unwrap() == &Token::And {
+            self.consume_token(Token::And);
+            let var = self.assigner.new_var();
+            let tmp = self.parse_eq_exp();
+            self.add_block_ins(format!("{} = and i1 {},{}", var, operand, tmp));
+            operand = var;
+        }
+        operand
     }
 
     fn parse_or_exp(&mut self) -> String {
-        " ".to_string()
+        let mut operand = self.parse_and_exp();
+        while self.iter.clone().next().unwrap() == &Token::Or {
+            self.consume_token(Token::Or);
+            let var = self.assigner.new_var();
+            let tmp = self.parse_and_exp();
+            self.add_block_ins(format!("{} = or i1 {},{}", var, operand, tmp));
+            operand = var;
+        }
+        operand
     }
 }
 
