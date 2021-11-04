@@ -343,16 +343,21 @@ impl<'a> Parser<'a> {
                 self.assigner.go_sub_block();
                 // 解析子块
                 self.parse_stmt();
-                // 跳转逻辑，跳转到下一块
-                self.add_block_ins(format!("br label %{}", next_block));
-                self.block_code += format!("{}:\n", next_block).as_str();
+                // 跳转逻辑，跳转到下一块，分两种情况
                 self.assigner.go_parent_block();
                 self.assigner.go_next_block();
+                if self.iter.clone().next().unwrap() == &Token::Else {
+                    let next_block = self.assigner.get_next_block();
+                    self.add_block_ins(format!("br label %{}", next_block));
+                } else {
+                    self.add_block_ins(format!("br label %{}", next_block));
+                }
+                self.block_code += format!("{}:\n", next_block).as_str();
                 // 解析可选的Else部分
                 if self.iter.clone().next().unwrap() == &Token::Else {
                     self.consume_token(Token::Else);
                     self.parse_stmt();
-                    // 跳转到下一块
+                    // 跳转到Else的下一块
                     let next_block = self.assigner.get_next_block();
                     self.assigner.go_next_block();
                     self.add_block_ins(format!("br label %{}", next_block));
