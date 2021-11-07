@@ -381,7 +381,31 @@ impl<'a> Parser<'a> {
                 }
             }
             Token::While => {
-                panic!("lab hasn't finished!")
+                // 直接进入条件跳转控制块
+                let cond_block = self.assigner.get_next_block();
+                self.assigner.go_next_block();
+                self.add_block_ins(format!("br label %{}", cond_block));
+                self.block_code += format!("{}:\n", cond_block).as_str();
+                // 解析条件
+                self.consume_token(Token::While);
+                self.consume_token(Token::LParen);
+                let cond = self.parse_or_exp();
+                self.consume_token(Token::RParen);
+                // 添加条件跳转指令
+                let sub_block = self.assigner.get_sub_block();
+                let next_block = self.assigner.get_next_block();
+                self.add_block_ins(format!(
+                    "br i1 {}, label %{}, label %{}",
+                    cond, sub_block, next_block
+                ));
+                // 进入并解析子块
+                self.block_code += format!("{}:\n", sub_block).as_str();
+                self.assigner.go_sub_block();
+                self.parse_stmt();
+                self.assigner.go_parent_block();
+                self.add_block_ins(format!("br label %{}", cond_block));
+                // 进入与while同级的下一块
+                self.block_code += format!("{}:\n", next_block).as_str();
             }
             Token::Break => {
                 panic!("lab hasn't finished!")
