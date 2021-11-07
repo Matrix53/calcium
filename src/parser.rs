@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::collections::{linked_list::Iter, LinkedList};
 
@@ -426,11 +427,17 @@ impl<'a> Parser<'a> {
             Token::Plus => self.parse_unary_exp(is_const),
             Token::Minus => {
                 let rhs = self.parse_unary_exp(is_const);
-                let lhs = self.assigner.new_var();
-                self.add_block_ins(format!("{} = sub i32 0, {}", lhs, rhs.unwrap()));
-                Some(lhs)
+                // 分为全局和局部
+                if self.symbol.is_global() {
+                    Some((-atoi(&rhs.unwrap(), 10)).to_string())
+                } else {
+                    let lhs = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = sub i32 0, {}", lhs, rhs.unwrap()));
+                    Some(lhs)
+                }
             }
             Token::Not => {
+                // 文法中令!仅在Cond中出现
                 // 比较
                 let mut operand = self.parse_unary_exp(is_const).unwrap();
                 let mut var = self.assigner.new_var();
@@ -450,6 +457,10 @@ impl<'a> Parser<'a> {
             Token::Ident(ident) => {
                 // 函数调用和普通表达式计算
                 if self.iter.clone().next().unwrap() == &Token::LParen {
+                    // 全局域不能调用函数
+                    if self.symbol.is_global() {
+                        panic!("call function on global scope!");
+                    }
                     // 收集参数
                     self.consume_token(Token::LParen);
                     let params = match self.iter.clone().next().unwrap() {
@@ -477,10 +488,18 @@ impl<'a> Parser<'a> {
                     if is_const && !self.symbol.get_var(ident).is_const {
                         panic!("var occurs in const expression!");
                     }
-                    let var = self.assigner.new_var();
-                    let reg = self.symbol.get_var(ident).reg.clone();
-                    self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
-                    Some(var)
+                    if self.symbol.is_global() {
+                        if !self.symbol.get_var(ident).is_const {
+                            panic!("initializer element is not a compile-time constant!");
+                        }
+                        Some(self.symbol.get_var(ident).value.to_string())
+                    } else {
+                        let var = self.assigner.new_var();
+                        let reg = self.symbol.get_var(ident).reg.clone();
+                        self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
+                        Some(var)
+                    }
+
                     // TODO 数组下标的逻辑
                 }
             }
@@ -506,23 +525,50 @@ impl<'a> Parser<'a> {
                 Some(Token::Multiply) => {
                     self.consume_token(Token::Multiply);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
-                    let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = mul i32 {}, {}", reg, operand.unwrap(), tmp));
-                    operand = Some(reg);
+                    if self.symbol.is_global() {
+                        operand = Some((atoi(&operand.unwrap(), 10) * atoi(&tmp, 10)).to_string());
+                    } else {
+                        let reg = self.assigner.new_var();
+                        self.add_block_ins(format!(
+                            "{} = mul i32 {}, {}",
+                            reg,
+                            operand.unwrap(),
+                            tmp
+                        ));
+                        operand = Some(reg);
+                    }
                 }
                 Some(Token::Divide) => {
                     self.consume_token(Token::Divide);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
-                    let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = sdiv i32 {}, {}", reg, operand.unwrap(), tmp));
-                    operand = Some(reg);
+                    if self.symbol.is_global() {
+                        operand = Some((atoi(&operand.unwrap(), 10) / atoi(&tmp, 10)).to_string());
+                    } else {
+                        let reg = self.assigner.new_var();
+                        self.add_block_ins(format!(
+                            "{} = sdiv i32 {}, {}",
+                            reg,
+                            operand.unwrap(),
+                            tmp
+                        ));
+                        operand = Some(reg);
+                    }
                 }
                 Some(Token::Mod) => {
                     self.consume_token(Token::Mod);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
-                    let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = srem i32 {}, {}", reg, operand.unwrap(), tmp));
-                    operand = Some(reg);
+                    if self.symbol.is_global() {
+                        operand = Some((atoi(&operand.unwrap(), 10) % atoi(&tmp, 10)).to_string());
+                    } else {
+                        let reg = self.assigner.new_var();
+                        self.add_block_ins(format!(
+                            "{} = srem i32 {}, {}",
+                            reg,
+                            operand.unwrap(),
+                            tmp
+                        ));
+                        operand = Some(reg);
+                    }
                 }
                 _ => break,
             }
@@ -537,16 +583,34 @@ impl<'a> Parser<'a> {
                 Some(Token::Plus) => {
                     self.consume_token(Token::Plus);
                     let tmp = self.parse_mul_exp(is_const).unwrap();
-                    let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = add i32 {}, {}", reg, operand.unwrap(), tmp));
-                    operand = Some(reg);
+                    if self.symbol.is_global() {
+                        operand = Some((atoi(&operand.unwrap(), 10) + atoi(&tmp, 10)).to_string());
+                    } else {
+                        let reg = self.assigner.new_var();
+                        self.add_block_ins(format!(
+                            "{} = add i32 {}, {}",
+                            reg,
+                            operand.unwrap(),
+                            tmp
+                        ));
+                        operand = Some(reg);
+                    }
                 }
                 Some(Token::Minus) => {
                     self.consume_token(Token::Minus);
                     let tmp = self.parse_mul_exp(is_const).unwrap();
-                    let reg = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = sub i32 {}, {}", reg, operand.unwrap(), tmp));
-                    operand = Some(reg);
+                    if self.symbol.is_global() {
+                        operand = Some((atoi(&operand.unwrap(), 10) - atoi(&tmp, 10)).to_string());
+                    } else {
+                        let reg = self.assigner.new_var();
+                        self.add_block_ins(format!(
+                            "{} = sub i32 {}, {}",
+                            reg,
+                            operand.unwrap(),
+                            tmp
+                        ));
+                        operand = Some(reg);
+                    }
                 }
                 _ => break,
             }
