@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::collections::HashMap;
 use std::collections::{linked_list::Iter, LinkedList};
 
@@ -408,10 +407,20 @@ impl<'a> Parser<'a> {
                 self.block_code += format!("{}:\n", next_block).as_str();
             }
             Token::Break => {
-                panic!("lab hasn't finished!")
+                // 直接进入与while同级的下一块
+                let break_block = self.assigner.get_break_block();
+                self.add_block_ins(format!("br label %{}", break_block));
+                // 解析无效代码
+                let next_block = self.assigner.get_next_block();
+                self.block_code += format!("{}:\n", next_block).as_str();
             }
             Token::Continue => {
-                panic!("lab hasn't finished!")
+                // 直接进入条件跳转控制块
+                let continue_block = self.assigner.get_continue_block();
+                self.add_block_ins(format!("br label %{}", continue_block));
+                // 解析无效代码
+                let next_block = self.assigner.get_next_block();
+                self.block_code += format!("{}:\n", next_block).as_str();
             }
             _ => {
                 if self.iter.clone().next().unwrap() != &Token::Semicolon {
@@ -764,8 +773,4 @@ impl<'a> Parser<'a> {
 
 fn atoi(str: &String, radix: u32) -> i32 {
     i32::from_str_radix(str.as_str(), radix).unwrap()
-}
-
-fn itoa(int: i32) -> String {
-    int.to_string()
 }
