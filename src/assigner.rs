@@ -58,7 +58,7 @@ impl Assigner {
     pub fn get_continue_block(&mut self) -> String {
         let mut block = String::from("b");
         for item in 0..*self.while_block_pos.last().unwrap() {
-            block += format!("_{}", item).as_str();
+            block += format!("_{}", self.block_pos[item]).as_str();
         }
         block
     }
@@ -67,7 +67,7 @@ impl Assigner {
         self.block_pos[*self.while_block_pos.last().unwrap() - 1] += 1;
         let mut block = String::from("b");
         for item in 0..*self.while_block_pos.last().unwrap() {
-            block += format!("_{}", item).as_str();
+            block += format!("_{}", self.block_pos[item]).as_str();
         }
         self.block_pos[*self.while_block_pos.last().unwrap() - 1] -= 1;
         block
