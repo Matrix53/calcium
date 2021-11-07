@@ -50,7 +50,7 @@ impl<'a> Parser<'a> {
         let mut func_code = String::from("");
         while self.iter.clone().next() != None {
             if self.iter.clone().nth(2).unwrap() == &Token::LParen {
-                func_code += self.parse_func_def().as_str();
+                func_code = func_code + self.parse_func_def().as_str() + "\n";
             } else {
                 self.parse_decl();
             }
@@ -63,6 +63,7 @@ impl<'a> Parser<'a> {
         declare void @putint(i32)\n\
         declare void @putarray(i32, i32*)\n\n",
         ) + self.global_code.clone().as_str()
+            + "\n"
             + func_code.as_str()
     }
 
@@ -108,13 +109,10 @@ impl<'a> Parser<'a> {
         // 逻辑处理，分为全局和局部
         if self.symbol.is_global() {
             if shape.is_empty() {
-                self.symbol.insert_var(
-                    &name,
-                    &format!("@{}", name),
-                    true,
-                    &shape,
-                    atoi(init_val.get(&0).unwrap(), 10),
-                );
+                let value = atoi(init_val.get(&0).unwrap(), 10);
+                let reg = format!("@{}", name);
+                self.symbol.insert_var(&name, &reg, true, &shape, value);
+                self.global_code += format!("{} = constant i32 {}\n", reg, value).as_str();
             } else {
                 // TODO 数组
             }
@@ -142,11 +140,11 @@ impl<'a> Parser<'a> {
         } else {
             self.consume_token(Token::LBrace);
             if self.iter.clone().next().unwrap() != &Token::RBrace {
-                let mut son = self.parse_init_val();
+                let mut son = self.parse_const_init_val();
                 // TODO 数组下标转换
                 while self.iter.clone().next().unwrap() == &Token::Comma {
                     self.consume_token(Token::Comma);
-                    son = self.parse_init_val();
+                    son = self.parse_const_init_val();
                     // TODO 数组下标转换
                 }
             }
@@ -194,13 +192,10 @@ impl<'a> Parser<'a> {
         // 逻辑处理，分为全局和局部
         if self.symbol.is_global() {
             if shape.is_empty() {
-                self.symbol.insert_var(
-                    &name,
-                    &format!("@{}", name),
-                    false,
-                    &shape,
-                    atoi(init_val.get(&0).unwrap(), 10),
-                );
+                let value = atoi(init_val.get(&0).unwrap(), 10);
+                let reg = format!("@{}", name);
+                self.symbol.insert_var(&name, &reg, false, &shape, value);
+                self.global_code += format!("{} = global i32 {}\n", reg, value).as_str();
             } else {
                 // TODO 数组
             }
