@@ -383,6 +383,7 @@ impl<'a> Parser<'a> {
                 // 直接进入条件跳转控制块
                 let cond_block = self.assigner.get_next_block();
                 self.assigner.go_next_block();
+                self.assigner.new_while_block();
                 self.add_block_ins(format!("br label %{}", cond_block));
                 self.block_code += format!("{}:\n", cond_block).as_str();
                 // 解析条件
@@ -407,6 +408,7 @@ impl<'a> Parser<'a> {
                 self.block_code += format!("{}:\n", next_block).as_str();
             }
             Token::Break => {
+                self.consume_token(Token::Break);
                 // 直接进入与while同级的下一块
                 let break_block = self.assigner.get_break_block();
                 self.add_block_ins(format!("br label %{}", break_block));
@@ -415,6 +417,7 @@ impl<'a> Parser<'a> {
                 self.block_code += format!("{}:\n", next_block).as_str();
             }
             Token::Continue => {
+                self.consume_token(Token::Continue);
                 // 直接进入条件跳转控制块
                 let continue_block = self.assigner.get_continue_block();
                 self.add_block_ins(format!("br label %{}", continue_block));
