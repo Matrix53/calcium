@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
         }
         // 初始值
         self.consume_token(Token::Assign);
-        let init_val = self.parse_const_init_val();
+        let init_val = self.parse_const_init_val(&shape);
         // 逻辑处理，分为全局和局部
         if self.symbol.is_global() {
             if shape.is_empty() {
@@ -132,8 +132,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_const_init_val(&mut self) -> HashMap<i32, String> {
+    // 使用while代替递归
+    fn parse_const_init_val(&mut self,shape:&Vec<i32>) -> HashMap<i32, String> {
         let mut res: HashMap<i32, String> = HashMap::new();
+        let deepth=0;
         if self.iter.clone().next().unwrap() != &Token::LBrace {
             res.insert(0, self.parse_add_exp(true).unwrap());
             res
@@ -185,7 +187,7 @@ impl<'a> Parser<'a> {
         let init_val = match self.iter.clone().next().unwrap() {
             Token::Assign => {
                 self.consume_token(Token::Assign);
-                self.parse_init_val()
+                self.parse_init_val(&shape)
             }
             _ => {
                 let mut tmp = HashMap::new();
@@ -221,7 +223,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_init_val(&mut self) -> HashMap<i32, String> {
+    fn parse_init_val(&mut self,shape:&Vec<i32>) -> HashMap<i32, String> {
         let mut res: HashMap<i32, String> = HashMap::new();
         if self.iter.clone().next().unwrap() != &Token::LBrace {
             res.insert(0, self.parse_add_exp(false).unwrap());
