@@ -142,3 +142,9 @@ pub struct Variable {
     pub shape: Vec<i32>,
     pub value: i32,
 }
+
+impl Variable {
+    pub fn get_array_definition(&self, value: &HashMap<i32, String>) -> String {
+        "".to_string()
+    }
+}

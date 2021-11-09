@@ -1,5 +1,7 @@
+use core::panic;
 use std::collections::HashMap;
 use std::collections::{linked_list::Iter, LinkedList};
+use std::vec;
 
 use super::assigner::Assigner;
 use super::symbol::SymbolTable;
@@ -96,7 +98,7 @@ impl<'a> Parser<'a> {
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
             let dimension = atoi(&self.parse_add_exp(true).unwrap(), 10);
-            if dimension <= 0 {
+            if dimension < 0 {
                 panic!("syntax error!");
             } else {
                 shape.push(dimension);
@@ -114,7 +116,14 @@ impl<'a> Parser<'a> {
                 self.symbol.insert_var(&name, &reg, true, &shape, value);
                 self.global_code += format!("{} = constant i32 {}\n", reg, value).as_str();
             } else {
-                // TODO 数组
+                let reg = format!("@{}", name);
+                self.symbol.insert_var(&name, &reg, true, &shape, 0);
+                self.global_code += format!(
+                    "{} = constant {}\n",
+                    reg,
+                    self.symbol.get_var(name).get_array_definition(&init_val)
+                )
+                .as_str();
             }
         } else {
             if shape.is_empty() {
@@ -132,27 +141,70 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // 使用while代替递归
-    fn parse_const_init_val(&mut self,shape:&Vec<i32>) -> HashMap<i32, String> {
+    fn parse_const_init_val(&mut self, shape: &Vec<i32>) -> HashMap<i32, String> {
         let mut res: HashMap<i32, String> = HashMap::new();
-        let deepth=0;
-        if self.iter.clone().next().unwrap() != &Token::LBrace {
+        if shape.is_empty() {
             res.insert(0, self.parse_add_exp(true).unwrap());
-            res
         } else {
             self.consume_token(Token::LBrace);
-            if self.iter.clone().next().unwrap() != &Token::RBrace {
-                let mut son = self.parse_const_init_val();
-                // TODO 数组下标转换
-                while self.iter.clone().next().unwrap() == &Token::Comma {
-                    self.consume_token(Token::Comma);
-                    son = self.parse_const_init_val();
-                    // TODO 数组下标转换
+            let mut pos = vec![0];
+            loop {
+                match self.iter.clone().next().unwrap() {
+                    Token::LBrace => {
+                        self.consume_token(Token::LBrace);
+                        if self.iter.clone().next().unwrap() == &Token::Comma {
+                            panic!("syntax error!");
+                        } else if pos.len() >= shape.len() {
+                            panic!("types mismatch!");
+                        } else {
+                            pos.push(0);
+                        }
+                    }
+                    Token::RBrace => {
+                        self.consume_token(Token::RBrace);
+                        pos.pop();
+                        if pos.is_empty() {
+                            break;
+                        }
+                        let next = self.iter.clone().next().unwrap();
+                        if next != &Token::RBrace && next != &Token::Comma {
+                            panic!("syntax error!");
+                        }
+                    }
+                    Token::Comma => {
+                        self.consume_token(Token::Comma);
+                        match self.iter.clone().next().unwrap() {
+                            Token::RBrace => panic!("syntax error!"),
+                            Token::Comma => panic!("syntax error!"),
+                            _ => {
+                                let len = pos.len();
+                                pos[len - 1] += 1;
+                            }
+                        }
+                    }
+                    _ => {
+                        if pos.len() != shape.len() || *pos.last().unwrap() > *shape.last().unwrap()
+                        {
+                            let mut var_pos = pos[0];
+                            for i in 0..pos.len() - 1 {
+                                var_pos *= shape[i];
+                                var_pos += pos[i + 1];
+                            }
+                            if res.contains_key(&var_pos) {
+                                panic!("syntax error!");
+                            }
+                            res.insert(var_pos, self.parse_add_exp(true).unwrap());
+                            if self.iter.clone().next().unwrap() == &Token::LBrace {
+                                panic!("syntax error!");
+                            }
+                        } else {
+                            panic!("syntax error!");
+                        }
+                    }
                 }
             }
-            self.consume_token(Token::RBrace);
-            res
         }
+        res
     }
 
     fn parse_var_decl(&mut self) {
@@ -176,7 +228,7 @@ impl<'a> Parser<'a> {
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
             let dimension = atoi(&self.parse_add_exp(true).unwrap(), 10);
-            if dimension <= 0 {
+            if dimension < 0 {
                 panic!("syntax error!");
             } else {
                 shape.push(dimension);
@@ -203,7 +255,14 @@ impl<'a> Parser<'a> {
                 self.symbol.insert_var(&name, &reg, false, &shape, value);
                 self.global_code += format!("{} = global i32 {}\n", reg, value).as_str();
             } else {
-                // TODO 数组
+                let reg = format!("@{}", name);
+                self.symbol.insert_var(&name, &reg, true, &shape, 0);
+                self.global_code += format!(
+                    "{} = global {}\n",
+                    reg,
+                    self.symbol.get_var(name).get_array_definition(&init_val)
+                )
+                .as_str();
             }
         } else {
             if shape.is_empty() {
@@ -223,25 +282,70 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_init_val(&mut self,shape:&Vec<i32>) -> HashMap<i32, String> {
+    fn parse_init_val(&mut self, shape: &Vec<i32>) -> HashMap<i32, String> {
         let mut res: HashMap<i32, String> = HashMap::new();
-        if self.iter.clone().next().unwrap() != &Token::LBrace {
+        if shape.is_empty() {
             res.insert(0, self.parse_add_exp(false).unwrap());
-            res
         } else {
             self.consume_token(Token::LBrace);
-            if self.iter.clone().next().unwrap() != &Token::RBrace {
-                let mut son = self.parse_init_val();
-                // TODO 数组下标转换
-                while self.iter.clone().next().unwrap() == &Token::Comma {
-                    self.consume_token(Token::Comma);
-                    son = self.parse_init_val();
-                    // TODO 数组下标转换
+            let mut pos = vec![0];
+            loop {
+                match self.iter.clone().next().unwrap() {
+                    Token::LBrace => {
+                        self.consume_token(Token::LBrace);
+                        if self.iter.clone().next().unwrap() == &Token::Comma {
+                            panic!("syntax error!");
+                        } else if pos.len() >= shape.len() {
+                            panic!("types mismatch!");
+                        } else {
+                            pos.push(0);
+                        }
+                    }
+                    Token::RBrace => {
+                        self.consume_token(Token::RBrace);
+                        pos.pop();
+                        if pos.is_empty() {
+                            break;
+                        }
+                        let next = self.iter.clone().next().unwrap();
+                        if next != &Token::RBrace && next != &Token::Comma {
+                            panic!("syntax error!");
+                        }
+                    }
+                    Token::Comma => {
+                        self.consume_token(Token::Comma);
+                        match self.iter.clone().next().unwrap() {
+                            Token::RBrace => panic!("syntax error!"),
+                            Token::Comma => panic!("syntax error!"),
+                            _ => {
+                                let len = pos.len();
+                                pos[len - 1] += 1;
+                            }
+                        }
+                    }
+                    _ => {
+                        if pos.len() != shape.len() || *pos.last().unwrap() > *shape.last().unwrap()
+                        {
+                            let mut var_pos = pos[0];
+                            for i in 0..pos.len() - 1 {
+                                var_pos *= shape[i];
+                                var_pos += pos[i + 1];
+                            }
+                            if res.contains_key(&var_pos) {
+                                panic!("syntax error!");
+                            }
+                            res.insert(var_pos, self.parse_add_exp(false).unwrap());
+                            if self.iter.clone().next().unwrap() == &Token::LBrace {
+                                panic!("syntax error!");
+                            }
+                        } else {
+                            panic!("syntax error!");
+                        }
+                    }
                 }
             }
-            self.consume_token(Token::RBrace);
-            res
         }
+        res
     }
 
     fn parse_func_def(&mut self) -> String {
