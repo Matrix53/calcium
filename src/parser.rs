@@ -188,7 +188,11 @@ impl<'a> Parser<'a> {
                 self.consume_token(Token::Assign);
                 self.parse_init_val()
             }
-            _ => HashMap::new(),
+            _ => {
+                let mut tmp = HashMap::new();
+                tmp.insert(0, String::from("0"));
+                tmp
+            }
         };
         // 逻辑处理，分为全局和局部
         if self.symbol.is_global() {
