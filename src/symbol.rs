@@ -4,6 +4,7 @@ pub struct SymbolTable {
     func_table: HashMap<String, Function>,
     var_table: LinkedList<HashMap<String, Variable>>,
     current_func: String,
+    current_val: String,
 }
 
 impl SymbolTable {
@@ -12,6 +13,7 @@ impl SymbolTable {
             func_table: HashMap::new(),
             var_table: LinkedList::new(),
             current_func: String::from(""),
+            current_val: String::from(""),
         };
         table.insert_func(&"getint".to_string(), true, &vec![]);
         table.insert_func(&"getch".to_string(), true, &vec![]);
@@ -29,6 +31,10 @@ impl SymbolTable {
 
     pub fn get_current_func(&self) -> &Function {
         self.get_func(&self.current_func)
+    }
+
+    pub fn get_current_val(&self) -> &Variable {
+        self.get_var(&self.current_val)
     }
 
     pub fn go_down(&mut self) {
@@ -81,6 +87,7 @@ impl SymbolTable {
         if self.var_table.front().unwrap().contains_key(name) {
             panic!("redefinition of variable!");
         }
+        self.current_val = name.clone();
         self.var_table.front_mut().unwrap().insert(
             name.clone(),
             Variable {
@@ -144,7 +151,13 @@ pub struct Variable {
 }
 
 impl Variable {
-    pub fn get_array_definition(&self, value: &HashMap<i32, String>) -> String {
-        "".to_string()
+    pub fn get_shape_from_vec(dimensions: &Vec<i32>) -> String {
+        let mut front = String::from("");
+        let mut back = String::from("");
+        for item in dimensions {
+            front += format!("[{} x ", item).as_str();
+            back += "]";
+        }
+        front + "i32" + back.as_str()
     }
 }
