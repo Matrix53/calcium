@@ -33,6 +33,27 @@ impl<'a> Parser<'a> {
     fn add_pre_ins(&mut self, ins: String) {
         self.pre_code += format!("    {}\n", ins).as_str();
     }
+
+    fn get_elem_pos(&mut self, var_name: String, pos: Vec<i32>) -> String {
+        let var = self.symbol.get_var(&var_name);
+        let mut shape = var.shape.clone();
+        let mut reg = var.reg.clone();
+        if shape.len() < pos.len() {
+            panic!("syntax error!");
+        }
+        for index in 0..pos.len() {
+            let new_reg = self.assigner.new_var();
+            let shape_str = Variable::get_shape_from_vec(&shape);
+            self.block_code += format!(
+                "{} = getelementptr {}, {}* {}, i64 0, i64 {}",
+                new_reg, shape_str, shape_str, reg, pos[index]
+            )
+            .as_str();
+            reg = new_reg;
+            shape.remove(0);
+        }
+        reg
+    }
 }
 
 impl<'a> Parser<'a> {
@@ -142,14 +163,15 @@ impl<'a> Parser<'a> {
                 } else {
                     res += " [";
                     let mut new_front = front.clone();
-                    new_front.push(1);
+                    new_front.push(0);
                     let mut new_back = back.clone();
                     new_back.remove(0);
                     res += self
                         .parse_const_init_val(new_front.clone(), new_back.clone())
                         .as_str();
-                    while *new_front.last().unwrap() < back[0] {
+                    while *new_front.last().unwrap() < back[0] - 1 {
                         res += ", ";
+                        *new_front.last_mut().unwrap() += 1;
                         match self.iter.clone().next().unwrap() {
                             Token::Comma => {
                                 self.consume_token(Token::Comma);
@@ -166,7 +188,6 @@ impl<'a> Parser<'a> {
                                 }
                             }
                         }
-                        *new_front.last_mut().unwrap() += 1;
                     }
                     self.consume_token(Token::RBrace);
                     res += "]";
@@ -175,7 +196,27 @@ impl<'a> Parser<'a> {
             }
         } else {
             if back.is_empty() {
+                let name = self.symbol.get_current_val().name.clone();
+                let reg = self.get_elem_pos(name, front.clone());
+                let val = self.parse_add_exp(true).unwrap();
+                self.add_block_ins(format!("store i32 {}, i32* {}", val, reg));
             } else {
+                self.consume_token(Token::LBrace);
+                if self.iter.clone().next().unwrap() != &Token::RBrace {
+                    let mut new_front = front.clone();
+                    new_front.push(0);
+                    let mut new_back = back.clone();
+                    new_back.remove(0);
+                    self.parse_const_init_val(new_front.clone(), new_back.clone())
+                        .as_str();
+                    while self.iter.clone().next().unwrap() == &Token::Comma {
+                        self.consume_token(Token::Comma);
+                        *new_front.last_mut().unwrap() += 1;
+                        self.parse_const_init_val(new_front.clone(), new_back.clone())
+                            .as_str();
+                    }
+                }
+                self.consume_token(Token::RBrace);
             }
             Variable::get_shape_from_vec(&back)
         }

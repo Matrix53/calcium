@@ -91,6 +91,7 @@ impl SymbolTable {
         self.var_table.front_mut().unwrap().insert(
             name.clone(),
             Variable {
+                name: name.clone(),
                 reg: reg.clone(),
                 is_const,
                 shape: shape.clone(),
@@ -145,6 +146,7 @@ impl Function {
 
 pub struct Variable {
     pub is_const: bool,
+    pub name: String,
     pub reg: String,
     pub shape: Vec<i32>,
     pub value: i32,
