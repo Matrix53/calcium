@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
         self.pre_code += format!("    {}\n", ins).as_str();
     }
 
-    fn get_elem_pos(&mut self, var_name: String, pos: Vec<i32>) -> String {
+    fn get_elem_pos(&mut self, var_name: String, pos: Vec<String>) -> String {
         let var = self.symbol.get_var(&var_name);
         let mut shape = var.shape.clone();
         let mut reg = var.reg.clone();
@@ -196,7 +196,11 @@ impl<'a> Parser<'a> {
         } else {
             if back.is_empty() {
                 let name = self.symbol.get_current_val().name.clone();
-                let reg = self.get_elem_pos(name, front.clone());
+                let mut pos: Vec<String> = vec![];
+                for item in front.clone() {
+                    pos.push(item.to_string());
+                }
+                let reg = self.get_elem_pos(name, pos);
                 let val = self.parse_add_exp(true).unwrap();
                 self.add_block_ins(format!("store i32 {}, i32* {}", val, reg));
             } else {
@@ -343,7 +347,11 @@ impl<'a> Parser<'a> {
         } else {
             if back.is_empty() {
                 let name = self.symbol.get_current_val().name.clone();
-                let reg = self.get_elem_pos(name, front.clone());
+                let mut pos: Vec<String> = vec![];
+                for item in front.clone() {
+                    pos.push(item.to_string());
+                }
+                let reg = self.get_elem_pos(name, pos);
                 let val = self.parse_add_exp(false).unwrap();
                 self.add_block_ins(format!("store i32 {}, i32* {}", val, reg));
             } else {
@@ -575,18 +583,20 @@ impl<'a> Parser<'a> {
             _ => panic!("syntax error!"),
         };
         if self.symbol.get_var(name).is_const {
-            panic!("lval can't be assigned!")
+            panic!("const val can't be assigned!")
         }
-        if self.iter.clone().next().unwrap() == &Token::LBracket {
-            // TODO 数组下标解析
+        let mut pos: Vec<String> = vec![];
+        while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
+            pos.push(self.parse_add_exp(false).unwrap());
             self.consume_token(Token::RBracket);
-            panic!("syntax error!")
         }
-        self.symbol.get_var(name).reg.clone()
+        if pos.len() != self.symbol.get_var(name).shape.len() {
+            panic!("syntax error!");
+        }
+        self.get_elem_pos(name.clone(), pos)
     }
 
-    // TODO 剩余的逻辑
     fn parse_unary_exp(&mut self, is_const: bool) -> Option<String> {
         match self.iter.next().unwrap() {
             Token::Number(num) => Some(num.to_string()),
