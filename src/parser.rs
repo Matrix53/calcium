@@ -175,10 +175,9 @@ impl<'a> Parser<'a> {
             }
         } else {
             if back.is_empty() {
-                format!("{}", self.parse_add_exp(true).unwrap())
             } else {
-                "".to_string()
             }
+            Variable::get_shape_from_vec(&back)
         }
     }
 
