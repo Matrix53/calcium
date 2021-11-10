@@ -669,19 +669,30 @@ impl<'a> Parser<'a> {
                     if is_const && !self.symbol.get_var(ident).is_const {
                         panic!("var occurs in const expression!");
                     }
+                    // 分为全局和局部
                     if self.symbol.is_global() {
                         if !self.symbol.get_var(ident).is_const {
                             panic!("initializer element is not a compile-time constant!");
                         }
+                        if !self.symbol.get_var(ident).shape.is_empty() {
+                            panic!("initializer element is not a compile-time constant!");
+                        }
                         Some(self.symbol.get_var(ident).value.to_string())
                     } else {
+                        let mut pos: Vec<String> = vec![];
+                        while self.iter.clone().next().unwrap() == &Token::LBracket {
+                            self.consume_token(Token::LBracket);
+                            pos.push(self.parse_add_exp(is_const).unwrap());
+                            self.consume_token(Token::RBracket);
+                        }
+                        if pos.len() != self.symbol.get_var(ident).shape.len() {
+                            panic!("syntax error!");
+                        }
                         let var = self.assigner.new_var();
-                        let reg = self.symbol.get_var(ident).reg.clone();
+                        let reg = self.get_elem_pos(ident.clone(), pos);
                         self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
                         Some(var)
                     }
-
-                    // TODO 数组下标的逻辑
                 }
             }
             _ => panic!("syntax error!"),
