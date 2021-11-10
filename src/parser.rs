@@ -80,6 +80,11 @@ impl<'a> Parser<'a> {
                 self.parse_decl();
             }
         }
+        // main函数检查
+        let main = self.symbol.get_func(&String::from("main"));
+        if !main.has_return || !main.params.is_empty() {
+            panic!("main function syntax error!");
+        }
         String::from(
             "declare i32 @getint()\n\
         declare i32 @getch()\n\
@@ -407,7 +412,7 @@ impl<'a> Parser<'a> {
         // 翻译并返回
         self.block_code.push_str("b_1:\n");
         self.assigner.go_next_block();
-        self.parse_block();
+        self.parse_func_block();
         self.add_pre_ins("br label %b_1".to_string());
         self.symbol.get_func(func_name).get_definition()
             + self.pre_code.as_str()
@@ -416,6 +421,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_func_fparams(&mut self) -> Vec<Vec<i32>> {
+        self.symbol.go_down();
         vec![]
     }
 
@@ -425,6 +431,15 @@ impl<'a> Parser<'a> {
 
     fn parse_block(&mut self) {
         self.symbol.go_down();
+        self.consume_token(Token::LBrace);
+        while self.iter.clone().next().unwrap() != &Token::RBrace {
+            self.parse_block_item();
+        }
+        self.consume_token(Token::RBrace);
+        self.symbol.go_up();
+    }
+
+    fn parse_func_block(&mut self) {
         self.consume_token(Token::LBrace);
         while self.iter.clone().next().unwrap() != &Token::RBrace {
             self.parse_block_item();
