@@ -112,7 +112,7 @@ impl Function {
         let mut params: Vec<String> = vec![];
         for item in &self.params {
             if item.is_empty() {
-                params.push(format!("i32 %x{}", params.len() + 1));
+                params.push(format!("i32 %p{}", params.len() + 1));
             }
         }
         format!(

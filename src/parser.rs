@@ -1,5 +1,4 @@
 use core::panic;
-use std::collections::BTreeMap;
 use std::collections::{linked_list::Iter, LinkedList};
 use std::vec;
 
@@ -397,6 +396,8 @@ impl<'a> Parser<'a> {
             Token::Ident(name) => name,
             _ => panic!("syntax error!"),
         };
+        // 解析参数
+        self.symbol.go_down();
         self.consume_token(Token::LParen);
         let func_params = match self.iter.clone().next().unwrap() {
             Token::RParen => vec![],
@@ -421,7 +422,6 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_func_fparams(&mut self) -> Vec<Vec<i32>> {
-        self.symbol.go_down();
         vec![]
     }
 
@@ -703,8 +703,8 @@ impl<'a> Parser<'a> {
                         if pos.len() != self.symbol.get_var(ident).shape.len() {
                             panic!("syntax error!");
                         }
-                        let var = self.assigner.new_var();
                         let reg = self.get_elem_pos(ident.clone(), pos);
+                        let var = self.assigner.new_var();
                         self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
                         Some(var)
                     }
