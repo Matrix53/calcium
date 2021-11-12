@@ -475,7 +475,7 @@ impl<'a> Parser<'a> {
                     self.add_block_ins(format!("ret i32 {}", ret_val));
                 }
             }
-            Token::Ident(ident) => {
+            Token::Ident(_ident) => {
                 match self
                     .iter
                     .clone()
