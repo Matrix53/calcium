@@ -422,11 +422,36 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_func_fparams(&mut self) -> Vec<Vec<i32>> {
-        vec![]
+        let mut res: Vec<Vec<i32>> = vec![];
+        res.push(self.parse_func_fparam());
+        while self.iter.clone().next().unwrap() == &Token::Comma {
+            self.consume_token(Token::Comma);
+            res.push(self.parse_func_fparam());
+        }
+        res
     }
 
-    fn parse_func_fparam(&mut self) -> String {
-        " ".to_string()
+    fn parse_func_fparam(&mut self) -> Vec<i32> {
+        self.consume_token(Token::Int);
+        let name = match self.iter.next().unwrap() {
+            Token::Ident(ident) => ident,
+            _ => panic!("syntax error!"),
+        };
+        let mut shape = match self.iter.clone().next().unwrap() {
+            Token::LBracket => {
+                self.consume_token(Token::LBracket);
+                self.consume_token(Token::RBracket);
+                vec![0]
+            }
+            _ => vec![],
+        };
+        while self.iter.clone().next().unwrap() == &Token::LBracket {
+            self.consume_token(Token::LBracket);
+            // TODO 常量表达式逻辑，返回Variable，再进入作用域添加
+            shape.push(atoi(&self.parse_add_exp(true).unwrap(), 10));
+            self.consume_token(Token::RBracket);
+        }
+        shape
     }
 
     fn parse_block(&mut self) {
