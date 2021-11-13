@@ -33,24 +33,31 @@ impl<'a> Parser<'a> {
         self.pre_code += format!("    {}\n", ins).as_str();
     }
 
-    fn get_elem_pos(&mut self, var_name: String, pos: Vec<String>) -> String {
-        let var = self.symbol.get_var(&var_name);
-        let mut shape = var.shape.clone();
-        let mut reg = var.reg.clone();
-        if shape.len() < pos.len() {
+    fn get_elem_pos(&mut self, var_name: String, pos: Vec<String>) -> Variable {
+        let mut var = self.symbol.get_var(&var_name).clone();
+        if var.shape.len() < pos.len() {
             panic!("syntax error!");
         }
         for index in 0..pos.len() {
             let new_reg = self.assigner.new_var();
-            let shape_str = Variable::get_shape_from_vec(&shape);
-            self.add_block_ins(format!(
-                "{} = getelementptr {}, {}* {}, i64 0, i64 {}",
-                new_reg, shape_str, shape_str, reg, pos[index]
-            ));
-            reg = new_reg;
-            shape.remove(0);
+            if index == 0 && var.shape[0] == 0 {
+                var.shape.remove(0);
+                let shape_str = Variable::get_shape_from_vec(&var.shape);
+                self.add_block_ins(format!(
+                    "{} = getelementptr {}, {}* {}, i64 {}",
+                    new_reg, shape_str, shape_str, var.reg, pos[index]
+                ));
+            } else {
+                let shape_str = Variable::get_shape_from_vec(&var.shape);
+                self.add_block_ins(format!(
+                    "{} = getelementptr {}, {}* {}, i64 0, i64 {}",
+                    new_reg, shape_str, shape_str, var.reg, pos[index]
+                ));
+                var.shape.remove(0);
+            }
+            var.reg = new_reg;
         }
-        reg
+        var
     }
 }
 
@@ -124,7 +131,7 @@ impl<'a> Parser<'a> {
         let mut shape: Vec<i32> = Vec::new();
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            let dimension = atoi(&self.parse_add_exp(true).unwrap(), 10);
+            let dimension = atoi(&self.parse_add_exp(true).unwrap().reg, 10);
             if dimension < 0 {
                 panic!("syntax error!");
             } else {
@@ -156,7 +163,7 @@ impl<'a> Parser<'a> {
     fn parse_const_init_val(&mut self, front: Vec<i32>, back: Vec<i32>) -> String {
         if self.symbol.is_global() {
             if back.is_empty() {
-                format!("i32 {}", self.parse_add_exp(true).unwrap())
+                format!("i32 {}", self.parse_add_exp(true).unwrap().reg)
             } else {
                 let mut res = Variable::get_shape_from_vec(&back);
                 self.consume_token(Token::LBrace);
@@ -204,9 +211,9 @@ impl<'a> Parser<'a> {
                 for item in front.clone() {
                     pos.push(item.to_string());
                 }
-                let reg = self.get_elem_pos(name, pos);
-                let val = self.parse_add_exp(true).unwrap();
-                self.add_block_ins(format!("store i32 {}, i32* {}", val, reg));
+                let var = self.get_elem_pos(name, pos);
+                let val = self.parse_add_exp(true).unwrap().reg;
+                self.add_block_ins(format!("store i32 {}, i32* {}", val, var.reg));
             } else {
                 self.consume_token(Token::LBrace);
                 if self.iter.clone().next().unwrap() != &Token::RBrace {
@@ -254,7 +261,7 @@ impl<'a> Parser<'a> {
         let mut shape: Vec<i32> = Vec::new();
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            let dimension = atoi(&self.parse_add_exp(true).unwrap(), 10);
+            let dimension = atoi(&self.parse_add_exp(true).unwrap().reg, 10);
             if dimension < 0 {
                 panic!("syntax error!");
             } else {
@@ -307,7 +314,7 @@ impl<'a> Parser<'a> {
     fn parse_init_val(&mut self, front: Vec<i32>, back: Vec<i32>) -> String {
         if self.symbol.is_global() {
             if back.is_empty() {
-                format!("i32 {}", self.parse_add_exp(false).unwrap())
+                format!("i32 {}", self.parse_add_exp(false).unwrap().reg)
             } else {
                 let mut res = Variable::get_shape_from_vec(&back);
                 self.consume_token(Token::LBrace);
@@ -355,9 +362,9 @@ impl<'a> Parser<'a> {
                 for item in front.clone() {
                     pos.push(item.to_string());
                 }
-                let reg = self.get_elem_pos(name, pos);
-                let val = self.parse_add_exp(false).unwrap();
-                self.add_block_ins(format!("store i32 {}, i32* {}", val, reg));
+                let var = self.get_elem_pos(name, pos);
+                let val = self.parse_add_exp(false).unwrap().reg;
+                self.add_block_ins(format!("store i32 {}, i32* {}", val, var.reg));
             } else {
                 self.consume_token(Token::LBrace);
                 if self.iter.clone().next().unwrap() != &Token::RBrace {
@@ -463,7 +470,8 @@ impl<'a> Parser<'a> {
         };
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            var.shape.push(atoi(&self.parse_add_exp(true).unwrap(), 10));
+            var.shape
+                .push(atoi(&self.parse_add_exp(true).unwrap().reg, 10));
             self.consume_token(Token::RBracket);
         }
         var
@@ -508,7 +516,7 @@ impl<'a> Parser<'a> {
                     }
                     self.add_block_ins("ret void".to_string());
                 } else {
-                    let ret_val = self.parse_add_exp(false).unwrap();
+                    let ret_val = self.parse_add_exp(false).unwrap().reg;
                     if !self.symbol.get_current_func().has_return {
                         panic!("return value mismatches!")
                     }
@@ -527,7 +535,7 @@ impl<'a> Parser<'a> {
                         self.consume_token(Token::Assign);
                         let rhs = self.parse_add_exp(false);
                         self.consume_token(Token::Semicolon);
-                        self.add_block_ins(format!("store i32 {}, i32* {}", rhs.unwrap(), lhs));
+                        self.add_block_ins(format!("store i32 {}, i32* {}", rhs.unwrap().reg, lhs));
                     }
                     Token::Semicolon => {
                         self.parse_add_exp(false);
@@ -643,50 +651,55 @@ impl<'a> Parser<'a> {
         let mut pos: Vec<String> = vec![];
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            pos.push(self.parse_add_exp(false).unwrap());
+            pos.push(self.parse_add_exp(false).unwrap().reg);
             self.consume_token(Token::RBracket);
         }
         if pos.len() != self.symbol.get_var(name).shape.len() {
             panic!("syntax error!");
         }
-        self.get_elem_pos(name.clone(), pos)
+        self.get_elem_pos(name.clone(), pos).reg
     }
 
-    fn parse_unary_exp(&mut self, is_const: bool) -> Option<String> {
+    fn parse_unary_exp(&mut self, is_const: bool) -> Option<Variable> {
         match self.iter.next().unwrap() {
-            Token::Number(num) => Some(num.to_string()),
+            Token::Number(num) => {
+                let mut res = Variable::new();
+                res.reg = num.to_string();
+                Some(res)
+            }
             Token::LParen => {
-                let ans = self.parse_add_exp(is_const);
+                let res = self.parse_add_exp(is_const);
                 self.consume_token(Token::RParen);
-                ans
+                res
             }
             Token::Plus => self.parse_unary_exp(is_const),
             Token::Minus => {
-                let rhs = self.parse_unary_exp(is_const);
+                let mut res = self.parse_unary_exp(is_const).unwrap();
                 // 分为全局和局部
                 if self.symbol.is_global() {
-                    Some((-atoi(&rhs.unwrap(), 10)).to_string())
+                    res.reg = (-atoi(&res.reg, 10)).to_string();
                 } else {
-                    let lhs = self.assigner.new_var();
-                    self.add_block_ins(format!("{} = sub i32 0, {}", lhs, rhs.unwrap()));
-                    Some(lhs)
+                    let new_reg = self.assigner.new_var();
+                    self.add_block_ins(format!("{} = sub i32 0, {}", new_reg, res.reg));
+                    res.reg = new_reg;
                 }
+                Some(res)
             }
             Token::Not => {
                 // 文法中令!仅在Cond中出现
                 // 比较
                 let mut operand = self.parse_unary_exp(is_const).unwrap();
                 let mut var = self.assigner.new_var();
-                self.add_block_ins(format!("{} = icmp ne i32 {}, 0", var, operand));
-                operand = var;
+                self.add_block_ins(format!("{} = icmp ne i32 {}, 0", var, operand.reg));
+                operand.reg = var;
                 // 取反
                 var = self.assigner.new_var();
-                self.add_block_ins(format!("{} = xor i1 {}, true", var, operand));
-                operand = var;
+                self.add_block_ins(format!("{} = xor i1 {}, true", var, operand.reg));
+                operand.reg = var;
                 // 类型转换
                 var = self.assigner.new_var();
-                self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand));
-                operand = var;
+                self.add_block_ins(format!("{} = zext i1 {} to i32", var, operand.reg));
+                operand.reg = var;
                 // 返回
                 Some(operand)
             }
@@ -706,20 +719,20 @@ impl<'a> Parser<'a> {
                     self.consume_token(Token::RParen);
                     // 调用并返回
                     if self.symbol.get_func(ident).has_return {
-                        let reg = self.assigner.new_var();
+                        let mut res = Variable::new();
+                        res.reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = {}",
-                            reg,
+                            res.reg,
                             self.symbol.get_func(ident).get_call_instruction(&params)
                         ));
-                        Some(reg)
+                        Some(res)
                     } else {
                         self.add_block_ins(
                             self.symbol.get_func(ident).get_call_instruction(&params),
                         );
                         None
                     }
-                    // TODO 数组参数的处理
                 } else {
                     if is_const && !self.symbol.get_var(ident).is_const {
                         panic!("var occurs in const expression!");
@@ -732,21 +745,25 @@ impl<'a> Parser<'a> {
                         if !self.symbol.get_var(ident).shape.is_empty() {
                             panic!("initializer element is not a compile-time constant!");
                         }
-                        Some(self.symbol.get_var(ident).value.to_string())
+                        let mut res = Variable::new();
+                        res.reg = self.symbol.get_var(ident).value.to_string();
+                        Some(res)
                     } else {
                         let mut pos: Vec<String> = vec![];
                         while self.iter.clone().next().unwrap() == &Token::LBracket {
                             self.consume_token(Token::LBracket);
-                            pos.push(self.parse_add_exp(is_const).unwrap());
+                            pos.push(self.parse_add_exp(is_const).unwrap().reg);
                             self.consume_token(Token::RBracket);
                         }
                         if pos.len() != self.symbol.get_var(ident).shape.len() {
                             panic!("syntax error!");
                         }
-                        let reg = self.get_elem_pos(ident.clone(), pos);
+                        let reg = self.get_elem_pos(ident.clone(), pos).reg;
                         let var = self.assigner.new_var();
                         self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
-                        Some(var)
+                        let mut res = Variable::new();
+                        res.reg = var;
+                        Some(res)
                     }
                 }
             }
@@ -755,8 +772,8 @@ impl<'a> Parser<'a> {
     }
 
     // TODO 参数类型检查, 利用get_current_func
-    fn parse_func_rparams(&mut self) -> Vec<String> {
-        let mut res: Vec<String> = vec![];
+    fn parse_func_rparams(&mut self) -> Vec<Variable> {
+        let mut res = vec![];
         res.push(self.parse_add_exp(false).unwrap());
         while self.iter.clone().next().unwrap() == &Token::Comma {
             self.consume_token(Token::Comma);
@@ -765,7 +782,7 @@ impl<'a> Parser<'a> {
         res
     }
 
-    fn parse_mul_exp(&mut self, is_const: bool) -> Option<String> {
+    fn parse_mul_exp(&mut self, is_const: bool) -> Option<Variable> {
         let mut operand = self.parse_unary_exp(is_const);
         loop {
             match self.iter.clone().next() {
@@ -773,48 +790,60 @@ impl<'a> Parser<'a> {
                     self.consume_token(Token::Multiply);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
                     if self.symbol.is_global() {
-                        operand = Some((atoi(&operand.unwrap(), 10) * atoi(&tmp, 10)).to_string());
+                        let mut res = operand.unwrap();
+                        res.reg = (atoi(&res.reg, 10) * atoi(&tmp.reg, 10)).to_string();
+                        operand = Some(res);
                     } else {
                         let reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = mul i32 {}, {}",
                             reg,
-                            operand.unwrap(),
-                            tmp
+                            operand.clone().unwrap().reg,
+                            tmp.reg
                         ));
-                        operand = Some(reg);
+                        let mut res = operand.unwrap();
+                        res.reg = reg;
+                        operand = Some(res);
                     }
                 }
                 Some(Token::Divide) => {
                     self.consume_token(Token::Divide);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
                     if self.symbol.is_global() {
-                        operand = Some((atoi(&operand.unwrap(), 10) / atoi(&tmp, 10)).to_string());
+                        let mut res = operand.unwrap();
+                        res.reg = (atoi(&res.reg, 10) / atoi(&tmp.reg, 10)).to_string();
+                        operand = Some(res);
                     } else {
                         let reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = sdiv i32 {}, {}",
                             reg,
-                            operand.unwrap(),
-                            tmp
+                            operand.clone().unwrap().reg,
+                            tmp.reg
                         ));
-                        operand = Some(reg);
+                        let mut res = operand.unwrap();
+                        res.reg = reg;
+                        operand = Some(res);
                     }
                 }
                 Some(Token::Mod) => {
                     self.consume_token(Token::Mod);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
                     if self.symbol.is_global() {
-                        operand = Some((atoi(&operand.unwrap(), 10) % atoi(&tmp, 10)).to_string());
+                        let mut res = operand.unwrap();
+                        res.reg = (atoi(&res.reg, 10) % atoi(&tmp.reg, 10)).to_string();
+                        operand = Some(res);
                     } else {
                         let reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = srem i32 {}, {}",
                             reg,
-                            operand.unwrap(),
-                            tmp
+                            operand.clone().unwrap().reg,
+                            tmp.reg
                         ));
-                        operand = Some(reg);
+                        let mut res = operand.unwrap();
+                        res.reg = reg;
+                        operand = Some(res);
                     }
                 }
                 _ => break,
@@ -823,7 +852,7 @@ impl<'a> Parser<'a> {
         operand
     }
 
-    fn parse_add_exp(&mut self, is_const: bool) -> Option<String> {
+    fn parse_add_exp(&mut self, is_const: bool) -> Option<Variable> {
         let mut operand = self.parse_mul_exp(is_const);
         loop {
             match self.iter.clone().next() {
@@ -831,32 +860,40 @@ impl<'a> Parser<'a> {
                     self.consume_token(Token::Plus);
                     let tmp = self.parse_mul_exp(is_const).unwrap();
                     if self.symbol.is_global() {
-                        operand = Some((atoi(&operand.unwrap(), 10) + atoi(&tmp, 10)).to_string());
+                        let mut res = operand.unwrap();
+                        res.reg = (atoi(&res.reg, 10) + atoi(&tmp.reg, 10)).to_string();
+                        operand = Some(res);
                     } else {
                         let reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = add i32 {}, {}",
                             reg,
-                            operand.unwrap(),
-                            tmp
+                            operand.clone().unwrap().reg,
+                            tmp.reg
                         ));
-                        operand = Some(reg);
+                        let mut res = operand.unwrap();
+                        res.reg = reg;
+                        operand = Some(res);
                     }
                 }
                 Some(Token::Minus) => {
                     self.consume_token(Token::Minus);
                     let tmp = self.parse_mul_exp(is_const).unwrap();
                     if self.symbol.is_global() {
-                        operand = Some((atoi(&operand.unwrap(), 10) - atoi(&tmp, 10)).to_string());
+                        let mut res = operand.unwrap();
+                        res.reg = (atoi(&res.reg, 10) - atoi(&tmp.reg, 10)).to_string();
+                        operand = Some(res);
                     } else {
                         let reg = self.assigner.new_var();
                         self.add_block_ins(format!(
                             "{} = sub i32 {}, {}",
                             reg,
-                            operand.unwrap(),
-                            tmp
+                            operand.clone().unwrap().reg,
+                            tmp.reg
                         ));
-                        operand = Some(reg);
+                        let mut res = operand.unwrap();
+                        res.reg = reg;
+                        operand = Some(res);
                     }
                 }
                 _ => break,
@@ -866,7 +903,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_rel_exp(&mut self) -> String {
-        let mut operand = self.parse_add_exp(false).unwrap();
+        let mut operand = self.parse_add_exp(false).unwrap().reg;
         loop {
             match self.iter.clone().next().unwrap() {
                 Token::Less => {

@@ -81,13 +81,13 @@ impl Assigner {
         self.block_pos.pop();
     }
 
-    pub fn go_previous_block(&mut self) {
-        if *self.block_pos.last().unwrap() < 2 {
-            panic!("bug occurs!");
-        } else {
-            *self.block_pos.last_mut().unwrap() -= 1;
-        }
-    }
+    // pub fn go_previous_block(&mut self) {
+    //     if *self.block_pos.last().unwrap() < 2 {
+    //         panic!("bug occurs!");
+    //     } else {
+    //         *self.block_pos.last_mut().unwrap() -= 1;
+    //     }
+    // }
 
     pub fn go_next_block(&mut self) {
         if self.block_pos.is_empty() {

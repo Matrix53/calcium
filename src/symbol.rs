@@ -123,17 +123,33 @@ impl Function {
         )
     }
 
-    pub fn get_call_instruction(&self, param: &Vec<String>) -> String {
+    pub fn get_call_instruction(&self, param: &Vec<Variable>) -> String {
         let mut params: Vec<String> = vec![];
         if self.params.len() != param.len() {
-            println!("{} {}", self.params.len(), param.len());
             panic!("param count mismatches!");
         }
         for index in 0..param.len() {
-            if self.params[index].is_empty() {
-                params.push(format!("i32 {}", param[index]));
+            if self.params[index].len() != param[index].shape.len() {
+                panic!("param type mismatches!");
             }
-            // TODO 对数组的处理
+            for item in 0..self.params[index].len() {
+                if self.params[index][item] != 0
+                    && self.params[index][item] != param[index].shape[item]
+                {
+                    panic!("param type mismatches!");
+                }
+            }
+            if param[index].shape.is_empty() {
+                params.push(format!("i32 {}", param[index].reg));
+            } else {
+                let mut tmp = param[index].clone();
+                tmp.shape.remove(0);
+                params.push(format!(
+                    "{}* {}",
+                    Variable::get_shape_from_vec(&tmp.shape),
+                    tmp.reg
+                ));
+            }
         }
         format!(
             "call {} @{}({})",
@@ -144,6 +160,7 @@ impl Function {
     }
 }
 
+#[derive(Clone)]
 pub struct Variable {
     pub is_const: bool,
     pub name: String,
