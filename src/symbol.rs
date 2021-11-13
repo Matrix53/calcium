@@ -113,6 +113,14 @@ impl Function {
         for item in &self.params {
             if item.is_empty() {
                 params.push(format!("i32 %p{}", params.len() + 1));
+            } else {
+                let mut res = item.clone();
+                res.remove(0);
+                params.push(format!(
+                    "{}* %p{}",
+                    Variable::get_shape_from_vec(&res),
+                    params.len() + 1
+                ));
             }
         }
         format!(

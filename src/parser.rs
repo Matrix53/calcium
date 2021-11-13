@@ -771,7 +771,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // TODO 参数类型检查, 利用get_current_func
     fn parse_func_rparams(&mut self) -> Vec<Variable> {
         let mut res = vec![];
         res.push(self.parse_add_exp(false).unwrap());
