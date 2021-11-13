@@ -153,6 +153,16 @@ pub struct Variable {
 }
 
 impl Variable {
+    pub fn new() -> Variable {
+        Variable {
+            is_const: false,
+            name: String::from(""),
+            reg: String::from(""),
+            shape: vec![],
+            value: 0,
+        }
+    }
+
     pub fn get_shape_from_vec(dimensions: &Vec<i32>) -> String {
         let mut front = String::from("");
         let mut back = String::from("");

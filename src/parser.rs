@@ -397,10 +397,12 @@ impl<'a> Parser<'a> {
             _ => panic!("syntax error!"),
         };
         // 解析参数
-        self.symbol.go_down();
         self.consume_token(Token::LParen);
         let func_params = match self.iter.clone().next().unwrap() {
-            Token::RParen => vec![],
+            Token::RParen => {
+                self.symbol.go_down();
+                vec![]
+            }
             _ => self.parse_func_fparams(),
         };
         self.consume_token(Token::RParen);
@@ -422,22 +424,36 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_func_fparams(&mut self) -> Vec<Vec<i32>> {
-        let mut res: Vec<Vec<i32>> = vec![];
-        res.push(self.parse_func_fparam());
+        let mut vars: Vec<Variable> = vec![];
+        vars.push(self.parse_func_fparam());
         while self.iter.clone().next().unwrap() == &Token::Comma {
             self.consume_token(Token::Comma);
-            res.push(self.parse_func_fparam());
+            vars.push(self.parse_func_fparam());
+        }
+        // 计算完参数再进入作用域添加符号
+        let mut res = vec![];
+        self.symbol.go_down();
+        for index in 0..vars.len() {
+            res.push(vars[index].shape.clone());
+            self.symbol.insert_var(
+                &vars[index].name,
+                &format!("%p{}", index + 1),
+                false,
+                &vars[index].shape,
+                0,
+            )
         }
         res
     }
 
-    fn parse_func_fparam(&mut self) -> Vec<i32> {
+    fn parse_func_fparam(&mut self) -> Variable {
         self.consume_token(Token::Int);
-        let name = match self.iter.next().unwrap() {
-            Token::Ident(ident) => ident,
+        let mut var = Variable::new();
+        var.name = match self.iter.next().unwrap() {
+            Token::Ident(ident) => ident.clone(),
             _ => panic!("syntax error!"),
         };
-        let mut shape = match self.iter.clone().next().unwrap() {
+        var.shape = match self.iter.clone().next().unwrap() {
             Token::LBracket => {
                 self.consume_token(Token::LBracket);
                 self.consume_token(Token::RBracket);
@@ -447,11 +463,10 @@ impl<'a> Parser<'a> {
         };
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
-            // TODO 常量表达式逻辑，返回Variable，再进入作用域添加
-            shape.push(atoi(&self.parse_add_exp(true).unwrap(), 10));
+            var.shape.push(atoi(&self.parse_add_exp(true).unwrap(), 10));
             self.consume_token(Token::RBracket);
         }
-        shape
+        var
     }
 
     fn parse_block(&mut self) {
