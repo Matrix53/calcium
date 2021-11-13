@@ -755,15 +755,16 @@ impl<'a> Parser<'a> {
                             pos.push(self.parse_add_exp(is_const).unwrap().reg);
                             self.consume_token(Token::RBracket);
                         }
-                        if pos.len() != self.symbol.get_var(ident).shape.len() {
+                        if pos.len() > self.symbol.get_var(ident).shape.len() {
                             panic!("syntax error!");
                         }
-                        let reg = self.get_elem_pos(ident.clone(), pos).reg;
-                        let var = self.assigner.new_var();
-                        self.add_block_ins(format!("{} = load i32, i32* {}", var, reg));
-                        let mut res = Variable::new();
-                        res.reg = var;
-                        Some(res)
+                        let mut var = self.get_elem_pos(ident.clone(), pos);
+                        if var.shape.is_empty() {
+                            let new_reg = self.assigner.new_var();
+                            self.add_block_ins(format!("{} = load i32, i32* {}", new_reg, var.reg));
+                            var.reg = new_reg;
+                        }
+                        Some(var)
                     }
                 }
             }
@@ -773,10 +774,30 @@ impl<'a> Parser<'a> {
 
     fn parse_func_rparams(&mut self) -> Vec<Variable> {
         let mut res = vec![];
-        res.push(self.parse_add_exp(false).unwrap());
+        let mut var = self.parse_add_exp(false).unwrap();
+        if !var.shape.is_empty() {
+            let new_reg = self.assigner.new_var();
+            let shape_str = Variable::get_shape_from_vec(&var.shape);
+            self.add_block_ins(format!(
+                "{} = getelementptr {}, {}* {}, i64 0, i64 0",
+                new_reg, shape_str, shape_str, var.reg
+            ));
+            var.reg = new_reg;
+        }
+        res.push(var.clone());
         while self.iter.clone().next().unwrap() == &Token::Comma {
             self.consume_token(Token::Comma);
-            res.push(self.parse_add_exp(false).unwrap())
+            var = self.parse_add_exp(false).unwrap();
+            if !var.shape.is_empty() {
+                let new_reg = self.assigner.new_var();
+                let shape_str = Variable::get_shape_from_vec(&var.shape);
+                self.add_block_ins(format!(
+                    "{} = getelementptr {}, {}* {}, i64 0, i64 0",
+                    new_reg, shape_str, shape_str, var.reg
+                ));
+                var.reg = new_reg;
+            }
+            res.push(var.clone());
         }
         res
     }
