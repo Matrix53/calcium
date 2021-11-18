@@ -556,6 +556,7 @@ impl<'a> Parser<'a> {
                         panic!("return value mismatches!")
                     }
                     self.add_block_ins(format!("ret i32 {}", ret_val));
+                    self.consume_token(Token::Semicolon);
                 }
             }
             Token::Ident(_ident) => {
