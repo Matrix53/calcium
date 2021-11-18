@@ -556,13 +556,13 @@ impl<'a> Parser<'a> {
                 let cond = self.parse_or_exp();
                 self.consume_token(Token::RParen);
                 // 跳转逻辑，跳转到子块
-                let next_block = self.assigner.get_next_block();
-                let sub_block = self.assigner.get_sub_block();
+                let if_next_block = self.assigner.get_next_block();
+                let if_sub_block = self.assigner.get_sub_block();
                 self.add_block_ins(format!(
                     "br i1 {}, label %{}, label %{}",
-                    cond, sub_block, next_block
+                    cond, if_sub_block, if_next_block
                 ));
-                self.block_code += format!("{}:\n", sub_block).as_str();
+                self.block_code += format!("{}:\n", if_sub_block).as_str();
                 self.assigner.go_sub_block();
                 // 解析子块
                 self.parse_stmt();
@@ -570,21 +570,22 @@ impl<'a> Parser<'a> {
                 self.assigner.go_parent_block();
                 self.assigner.go_next_block();
                 if self.iter.clone().next().unwrap() == &Token::Else {
-                    let next_block = self.assigner.get_next_block();
-                    self.add_block_ins(format!("br label %{}", next_block));
-                } else {
-                    self.add_block_ins(format!("br label %{}", next_block));
-                }
-                self.block_code += format!("{}:\n", next_block).as_str();
-                // 解析可选的Else部分
-                if self.iter.clone().next().unwrap() == &Token::Else {
                     self.consume_token(Token::Else);
+                    let else_next_block=self.assigner.get_next_block();
+                    self.add_block_ins(format!("br label %{}", else_next_block));
+                    self.block_code += format!("{}:\n", if_next_block).as_str();
+                    let else_sub_block=self.assigner.get_sub_block();
+                    self.add_block_ins(format!("br label %{}", else_sub_block));
+                    self.block_code += format!("{}:\n", else_sub_block).as_str();
+                    self.assigner.go_sub_block();
                     self.parse_stmt();
-                    // 跳转到Else的下一块
-                    let next_block = self.assigner.get_next_block();
+                    self.assigner.go_parent_block();
                     self.assigner.go_next_block();
-                    self.add_block_ins(format!("br label %{}", next_block));
-                    self.block_code += format!("{}:\n", next_block).as_str();
+                    self.add_block_ins(format!("br label %{}", else_next_block));
+                    self.block_code += format!("{}:\n", else_next_block).as_str();
+                } else {
+                    self.add_block_ins(format!("br label %{}", if_next_block));
+                    self.block_code += format!("{}:\n", if_next_block).as_str();
                 }
             }
             Token::While => {
