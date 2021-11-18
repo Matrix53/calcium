@@ -148,10 +148,11 @@ impl<'a> Parser<'a> {
             if shape.is_empty() {
                 self.symbol
                     .insert_var(&name, &reg, true, &shape, atoi(&init_val, 10));
+                self.global_code += format!("{} = constant i32 {}\n", reg, init_val).as_str();
             } else {
                 self.symbol.insert_var(&name, &reg, true, &shape, 0);
+                self.global_code += format!("{} = constant {}\n", reg, init_val).as_str();
             }
-            self.global_code += format!("{} = constant {}\n", reg, init_val).as_str();
         } else {
             let reg = self.assigner.new_pre_var();
             self.symbol.insert_var(&name, &reg, true, &shape, 0);
@@ -163,7 +164,7 @@ impl<'a> Parser<'a> {
     fn parse_const_init_val(&mut self, front: Vec<i32>, back: Vec<i32>) -> String {
         if self.symbol.is_global() {
             if back.is_empty() {
-                format!("i32 {}", self.parse_add_exp(true).unwrap().reg)
+                self.parse_add_exp(true).unwrap().reg
             } else {
                 let mut res = Variable::get_shape_from_vec(&back);
                 self.consume_token(Token::LBrace);
@@ -279,10 +280,11 @@ impl<'a> Parser<'a> {
                 if shape.is_empty() {
                     self.symbol
                         .insert_var(&name, &reg, false, &shape, atoi(&init_val, 10));
+                        self.global_code += format!("{} = global i32 {}\n", reg, init_val).as_str();
                 } else {
                     self.symbol.insert_var(&name, &reg, false, &shape, 0);
+                    self.global_code += format!("{} = global {}\n", reg, init_val).as_str();
                 }
-                self.global_code += format!("{} = global {}\n", reg, init_val).as_str();
             } else {
                 let reg = self.assigner.new_pre_var();
                 self.symbol.insert_var(&name, &reg, false, &shape, 0);
@@ -314,7 +316,7 @@ impl<'a> Parser<'a> {
     fn parse_init_val(&mut self, front: Vec<i32>, back: Vec<i32>) -> String {
         if self.symbol.is_global() {
             if back.is_empty() {
-                format!("i32 {}", self.parse_add_exp(false).unwrap().reg)
+                self.parse_add_exp(false).unwrap().reg
             } else {
                 let mut res = Variable::get_shape_from_vec(&back);
                 self.consume_token(Token::LBrace);
