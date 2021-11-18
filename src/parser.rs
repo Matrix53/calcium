@@ -613,6 +613,7 @@ impl<'a> Parser<'a> {
                 self.assigner.go_parent_block();
                 self.add_block_ins(format!("br label %{}", cond_block));
                 // 进入与while同级的下一块
+                self.assigner.go_next_block();
                 self.block_code += format!("{}:\n", next_block).as_str();
             }
             Token::Break => {
