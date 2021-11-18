@@ -177,6 +177,9 @@ impl<'a> Parser<'a> {
                     new_front.push(0);
                     let mut new_back = back.clone();
                     new_back.remove(0);
+                    if new_back.is_empty() {
+                        res += "i32 ";
+                    }
                     res += self
                         .parse_const_init_val(new_front.clone(), new_back.clone())
                         .as_str();
@@ -186,6 +189,9 @@ impl<'a> Parser<'a> {
                         match self.iter.clone().next().unwrap() {
                             Token::Comma => {
                                 self.consume_token(Token::Comma);
+                                if new_back.is_empty() {
+                                    res += "i32 ";
+                                }
                                 res += self
                                     .parse_const_init_val(new_front.clone(), new_back.clone())
                                     .as_str();
@@ -280,7 +286,7 @@ impl<'a> Parser<'a> {
                 if shape.is_empty() {
                     self.symbol
                         .insert_var(&name, &reg, false, &shape, atoi(&init_val, 10));
-                        self.global_code += format!("{} = global i32 {}\n", reg, init_val).as_str();
+                    self.global_code += format!("{} = global i32 {}\n", reg, init_val).as_str();
                 } else {
                     self.symbol.insert_var(&name, &reg, false, &shape, 0);
                     self.global_code += format!("{} = global {}\n", reg, init_val).as_str();
@@ -329,6 +335,9 @@ impl<'a> Parser<'a> {
                     new_front.push(0);
                     let mut new_back = back.clone();
                     new_back.remove(0);
+                    if new_back.is_empty() {
+                        res += "i32 ";
+                    }
                     res += self
                         .parse_init_val(new_front.clone(), new_back.clone())
                         .as_str();
@@ -338,6 +347,9 @@ impl<'a> Parser<'a> {
                         match self.iter.clone().next().unwrap() {
                             Token::Comma => {
                                 self.consume_token(Token::Comma);
+                                if new_back.is_empty() {
+                                    res += "i32 ";
+                                }
                                 res += self
                                     .parse_init_val(new_front.clone(), new_back.clone())
                                     .as_str();
@@ -571,10 +583,10 @@ impl<'a> Parser<'a> {
                 self.assigner.go_next_block();
                 if self.iter.clone().next().unwrap() == &Token::Else {
                     self.consume_token(Token::Else);
-                    let else_next_block=self.assigner.get_next_block();
+                    let else_next_block = self.assigner.get_next_block();
                     self.add_block_ins(format!("br label %{}", else_next_block));
                     self.block_code += format!("{}:\n", if_next_block).as_str();
-                    let else_sub_block=self.assigner.get_sub_block();
+                    let else_sub_block = self.assigner.get_sub_block();
                     self.add_block_ins(format!("br label %{}", else_sub_block));
                     self.block_code += format!("{}:\n", else_sub_block).as_str();
                     self.assigner.go_sub_block();
