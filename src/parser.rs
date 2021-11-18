@@ -440,11 +440,15 @@ impl<'a> Parser<'a> {
         self.parse_func_block();
         self.add_pre_ins("br label %b_1".to_string());
         let last_ins = self.block_code.trim().split("\n").last().unwrap();
-        if !last_ins.starts_with("    br")
-            && !last_ins.starts_with("    ret")
-            && !self.symbol.get_current_func().has_return
-        {
-            self.add_block_ins("ret void".to_string());
+        if !last_ins.starts_with("    br") && !last_ins.starts_with("    ret") {
+            self.add_block_ins(format!(
+                "ret {}",
+                if self.symbol.get_current_func().has_return {
+                    "i32 0"
+                } else {
+                    "void"
+                }
+            ));
         }
         self.symbol.get_func(func_name).get_definition()
             + self.pre_code.as_str()
