@@ -80,7 +80,9 @@ impl Assigner {
     pub fn go_parent_block(&mut self) {
         self.block_pos.pop();
         self.while_block_pos.sort();
-        while !self.while_block_pos.is_empty()&&self.while_block_pos.last().unwrap()>=&self.block_pos.len(){
+        while !self.while_block_pos.is_empty()
+            && self.while_block_pos.last().unwrap() >= &self.block_pos.len()
+        {
             self.while_block_pos.pop();
         }
     }

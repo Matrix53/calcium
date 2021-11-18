@@ -407,6 +407,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_func_def(&mut self) -> String {
+        // 初始化
+        self.assigner.reset();
+        self.pre_code.clear();
+        self.block_code.clear();
+        self.block_code.push_str("b_1:\n");
         // 声明解析
         let func_type = match self.iter.next().unwrap() {
             Token::Void => "void",
@@ -427,14 +432,10 @@ impl<'a> Parser<'a> {
             _ => self.parse_func_fparams(),
         };
         self.consume_token(Token::RParen);
-        // 初始化
+        // 向符号表中插入函数
         self.symbol
             .insert_func(func_name, func_type.eq("i32"), &func_params);
-        self.assigner.reset();
-        self.pre_code.clear();
-        self.block_code.clear();
         // 翻译并返回
-        self.block_code.push_str("b_1:\n");
         self.assigner.go_next_block();
         self.parse_func_block();
         self.add_pre_ins("br label %b_1".to_string());
@@ -456,13 +457,26 @@ impl<'a> Parser<'a> {
         self.symbol.go_down();
         for index in 0..vars.len() {
             res.push(vars[index].shape.clone());
-            self.symbol.insert_var(
-                &vars[index].name,
-                &format!("%p{}", index + 1),
-                false,
-                &vars[index].shape,
-                0,
-            )
+            if vars[index].shape.is_empty() {
+                let pre_var = self.assigner.new_pre_var();
+                self.add_pre_ins(format!("{} = alloca i32", pre_var));
+                self.add_block_ins(format!("store i32 %p{}, i32* {}", index + 1, pre_var));
+                self.symbol.insert_var(
+                    &vars[index].name,
+                    &format!("{}", pre_var),
+                    false,
+                    &vars[index].shape,
+                    0,
+                );
+            } else {
+                self.symbol.insert_var(
+                    &vars[index].name,
+                    &format!("%p{}", index + 1),
+                    false,
+                    &vars[index].shape,
+                    0,
+                );
+            }
         }
         res
     }
