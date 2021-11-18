@@ -830,7 +830,7 @@ impl<'a> Parser<'a> {
         while self.iter.clone().next().unwrap() == &Token::Comma {
             self.consume_token(Token::Comma);
             var = self.parse_add_exp(false).unwrap();
-            if !var.shape.is_empty() {
+            if !var.shape.is_empty() && var.shape[0] != 0 {
                 let new_reg = self.assigner.new_var();
                 let shape_str = Variable::get_shape_from_vec(&var.shape);
                 self.add_block_ins(format!(
