@@ -1,4 +1,4 @@
-[jobs.lab8]
+[jobs.lab5]
 
 image = { source = "dockerfile", path = "." }
 
