@@ -44,13 +44,13 @@ impl<'a> Parser<'a> {
                 var.shape.remove(0);
                 let shape_str = Variable::get_shape_from_vec(&var.shape);
                 self.add_block_ins(format!(
-                    "{} = getelementptr {}, {}* {}, i64 {}",
+                    "{} = getelementptr {}, {}* {}, i32 {}",
                     new_reg, shape_str, shape_str, var.reg, pos[index]
                 ));
             } else {
                 let shape_str = Variable::get_shape_from_vec(&var.shape);
                 self.add_block_ins(format!(
-                    "{} = getelementptr {}, {}* {}, i64 0, i64 {}",
+                    "{} = getelementptr {}, {}* {}, i32 0, i32 {}",
                     new_reg, shape_str, shape_str, var.reg, pos[index]
                 ));
                 var.shape.remove(0);
@@ -795,7 +795,7 @@ impl<'a> Parser<'a> {
             let new_reg = self.assigner.new_var();
             let shape_str = Variable::get_shape_from_vec(&var.shape);
             self.add_block_ins(format!(
-                "{} = getelementptr {}, {}* {}, i64 0, i64 0",
+                "{} = getelementptr {}, {}* {}, i32 0, i32 0",
                 new_reg, shape_str, shape_str, var.reg
             ));
             var.reg = new_reg;
@@ -808,7 +808,7 @@ impl<'a> Parser<'a> {
                 let new_reg = self.assigner.new_var();
                 let shape_str = Variable::get_shape_from_vec(&var.shape);
                 self.add_block_ins(format!(
-                    "{} = getelementptr {}, {}* {}, i64 0, i64 0",
+                    "{} = getelementptr {}, {}* {}, i32 0, i32 0",
                     new_reg, shape_str, shape_str, var.reg
                 ));
                 var.reg = new_reg;
