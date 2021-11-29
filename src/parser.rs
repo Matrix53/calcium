@@ -12,9 +12,10 @@ pub struct Parser<'a> {
     iter: Iter<'a, Token>,
     symbol: SymbolTable,
     assigner: Assigner,
-    pre_code: String,    // alloca部分，递归过程中添加代码
-    block_code: String,  // 基本块部分，递归过程中添加代码
+    pre_code: String,       // alloca部分，递归过程中添加代码
+    block_code: String,     // 基本块部分，递归过程中添加代码
     global_code: String, // 全局变量部分，递归过程中添加代码，其实可以综合成Code类，不过这样得小重构一波
+    is_parsing_const: bool, // 是否正在解析局部常量数组维度
 }
 
 impl<'a> Parser<'a> {
@@ -73,6 +74,7 @@ impl<'a> Parser<'a> {
             pre_code: String::new(),
             block_code: String::new(),
             global_code: String::new(),
+            is_parsing_const: false,
         };
         parser.parse_comp_unit()
     }
@@ -154,10 +156,20 @@ impl<'a> Parser<'a> {
                 self.global_code += format!("{} = constant {}\n", reg, init_val).as_str();
             }
         } else {
-            let reg = self.assigner.new_pre_var();
-            self.symbol.insert_var(&name, &reg, true, &shape, 0);
-            let init_val = self.parse_const_init_val(vec![], shape.clone());
-            self.add_pre_ins(format!("{} = alloca {}", reg, init_val));
+            if shape.is_empty() {
+                let reg = self.assigner.new_pre_var();
+                self.is_parsing_const=true;
+                let init_val = atoi(&self.parse_add_exp(true).unwrap().reg,10);
+                self.is_parsing_const=false;
+                self.symbol.insert_var(&name, &reg, true, &shape, init_val);
+                self.add_pre_ins(format!("{} = alloca i32", reg));
+                self.add_block_ins(format!("store i32 {}, i32* {}", reg, init_val));
+            } else {
+                let reg = self.assigner.new_pre_var();
+                self.symbol.insert_var(&name, &reg, true, &shape, 0);
+                let init_val = self.parse_const_init_val(vec![], shape.clone());
+                self.add_pre_ins(format!("{} = alloca {}", reg, init_val));
+            }
         }
     }
 
@@ -268,7 +280,9 @@ impl<'a> Parser<'a> {
         let mut shape: Vec<i32> = Vec::new();
         while self.iter.clone().next().unwrap() == &Token::LBracket {
             self.consume_token(Token::LBracket);
+            self.is_parsing_const = true;
             let dimension = atoi(&self.parse_add_exp(true).unwrap().reg, 10);
+            self.is_parsing_const = false;
             if dimension < 0 {
                 panic!("syntax error!");
             } else {
@@ -824,10 +838,13 @@ impl<'a> Parser<'a> {
                             panic!("syntax error!");
                         }
                         let mut var = self.get_elem_pos(ident.clone(), pos);
-                        if var.shape.is_empty() {
+                        if var.shape.is_empty() && !self.is_parsing_const {
                             let new_reg = self.assigner.new_var();
                             self.add_block_ins(format!("{} = load i32, i32* {}", new_reg, var.reg));
                             var.reg = new_reg;
+                        }
+                        if self.is_parsing_const {
+                            var.reg = var.value.to_string();
                         }
                         Some(var)
                     }
@@ -874,7 +891,7 @@ impl<'a> Parser<'a> {
                 Some(Token::Multiply) => {
                     self.consume_token(Token::Multiply);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
-                    if self.symbol.is_global() {
+                    if self.symbol.is_global() || self.is_parsing_const {
                         let mut res = operand.unwrap();
                         res.reg = (atoi(&res.reg, 10) * atoi(&tmp.reg, 10)).to_string();
                         operand = Some(res);
@@ -894,7 +911,7 @@ impl<'a> Parser<'a> {
                 Some(Token::Divide) => {
                     self.consume_token(Token::Divide);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
-                    if self.symbol.is_global() {
+                    if self.symbol.is_global() || self.is_parsing_const {
                         let mut res = operand.unwrap();
                         res.reg = (atoi(&res.reg, 10) / atoi(&tmp.reg, 10)).to_string();
                         operand = Some(res);
@@ -914,7 +931,7 @@ impl<'a> Parser<'a> {
                 Some(Token::Mod) => {
                     self.consume_token(Token::Mod);
                     let tmp = self.parse_unary_exp(is_const).unwrap();
-                    if self.symbol.is_global() {
+                    if self.symbol.is_global() || self.is_parsing_const {
                         let mut res = operand.unwrap();
                         res.reg = (atoi(&res.reg, 10) % atoi(&tmp.reg, 10)).to_string();
                         operand = Some(res);
@@ -944,7 +961,7 @@ impl<'a> Parser<'a> {
                 Some(Token::Plus) => {
                     self.consume_token(Token::Plus);
                     let tmp = self.parse_mul_exp(is_const).unwrap();
-                    if self.symbol.is_global() {
+                    if self.symbol.is_global() || self.is_parsing_const {
                         let mut res = operand.unwrap();
                         res.reg = (atoi(&res.reg, 10) + atoi(&tmp.reg, 10)).to_string();
                         operand = Some(res);
@@ -964,7 +981,7 @@ impl<'a> Parser<'a> {
                 Some(Token::Minus) => {
                     self.consume_token(Token::Minus);
                     let tmp = self.parse_mul_exp(is_const).unwrap();
-                    if self.symbol.is_global() {
+                    if self.symbol.is_global() || self.is_parsing_const {
                         let mut res = operand.unwrap();
                         res.reg = (atoi(&res.reg, 10) - atoi(&tmp.reg, 10)).to_string();
                         operand = Some(res);
