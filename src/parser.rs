@@ -163,7 +163,7 @@ impl<'a> Parser<'a> {
                 self.is_parsing_const=false;
                 self.symbol.insert_var(&name, &reg, true, &shape, init_val);
                 self.add_pre_ins(format!("{} = alloca i32", reg));
-                self.add_block_ins(format!("store i32 {}, i32* {}", reg, init_val));
+                self.add_block_ins(format!("store i32 {}, i32* {}", init_val, reg));
             } else {
                 let reg = self.assigner.new_pre_var();
                 self.symbol.insert_var(&name, &reg, true, &shape, 0);
