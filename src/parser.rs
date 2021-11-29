@@ -470,6 +470,13 @@ impl<'a> Parser<'a> {
         let pre_var = self.assigner.new_pre_var();
         self.add_pre_ins(format!("{} = alloca i1", pre_var));
         self.add_block_ins(format!("store i1 0, i1* {}", pre_var));
+        self.symbol.insert_var(
+            &"#impossible#".to_string(),
+            &"%1".to_string(),
+            false,
+            &vec![],
+            0,
+        );
         // 处理形式参数
         for index in 0..vars.len() {
             res.push(vars[index].shape.clone());
