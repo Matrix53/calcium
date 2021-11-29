@@ -469,7 +469,7 @@ impl<'a> Parser<'a> {
         // 添加短路求值需要的局部变量
         let pre_var = self.assigner.new_pre_var();
         self.add_pre_ins(format!("{} = alloca i1", pre_var));
-        self.add_block_ins(format!("store i1 0, i32* {}", pre_var));
+        self.add_block_ins(format!("store i1 0, i1* {}", pre_var));
         // 处理形式参数
         for index in 0..vars.len() {
             res.push(vars[index].shape.clone());
