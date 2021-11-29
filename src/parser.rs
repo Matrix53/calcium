@@ -427,6 +427,17 @@ impl<'a> Parser<'a> {
         let func_params = match self.iter.clone().next().unwrap() {
             Token::RParen => {
                 self.symbol.go_down();
+                // 添加短路求值需要的局部变量
+                let pre_var = self.assigner.new_pre_var();
+                self.add_pre_ins(format!("{} = alloca i1", pre_var));
+                self.add_block_ins(format!("store i1 0, i1* {}", pre_var));
+                self.symbol.insert_var(
+                    &"#impossible#".to_string(),
+                    &"%1".to_string(),
+                    false,
+                    &vec![],
+                    0,
+                );
                 vec![]
             }
             _ => self.parse_func_fparams(),
