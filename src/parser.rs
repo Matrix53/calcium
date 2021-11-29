@@ -466,6 +466,11 @@ impl<'a> Parser<'a> {
         // 计算完参数再进入作用域添加符号
         let mut res = vec![];
         self.symbol.go_down();
+        // 添加短路求值需要的局部变量
+        let pre_var = self.assigner.new_pre_var();
+        self.add_pre_ins(format!("{} = alloca i1", pre_var));
+        self.add_block_ins(format!("store i1 0, i32* {}", pre_var));
+        // 处理形式参数
         for index in 0..vars.len() {
             res.push(vars[index].shape.clone());
             if vars[index].shape.is_empty() {
@@ -1060,27 +1065,103 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_and_exp(&mut self) -> String {
+        // 当前的逻辑表达式计算结果
         let mut operand = self.parse_eq_exp();
+        // 短路求值用到的固定block
+        let true_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        let false_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        let exit_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        // 计算下一个逻辑表达式用到的block
+        let mut next_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        // 循环计算逻辑表达式最终结果
+        self.add_block_ins(format!(
+            "br i1 {}, label %{}, label %{}",
+            operand, next_block, false_block
+        ));
+        self.block_code += format!("{}:\n", next_block).as_str();
         while self.iter.clone().next().unwrap() == &Token::And {
             self.consume_token(Token::And);
             let var = self.assigner.new_var();
             let tmp = self.parse_eq_exp();
             self.add_block_ins(format!("{} = and i1 {},{}", var, operand, tmp));
             operand = var;
+            // 短路求值
+            next_block = self.assigner.get_next_block();
+            self.assigner.go_next_block();
+            self.add_block_ins(format!(
+                "br i1 {}, label %{}, label %{}",
+                operand, next_block, false_block
+            ));
+            self.block_code += format!("{}:\n", next_block).as_str();
         }
-        operand
+        self.add_block_ins(format!("br label %{}", true_block));
+        // 返回true的情况
+        self.block_code += format!("{}:\n", true_block).as_str();
+        self.add_block_ins(format!("store i1 1, i1* %1"));
+        self.add_block_ins(format!("br label %{}", exit_block));
+        // 返回false的情况
+        self.block_code += format!("{}:\n", false_block).as_str();
+        self.add_block_ins(format!("store i1 0, i1* %1"));
+        self.add_block_ins(format!("br label %{}", exit_block));
+        // 唯一的出口block
+        self.block_code += format!("{}:\n", exit_block).as_str();
+        let var = self.assigner.new_var();
+        self.add_block_ins(format!("{} = load i1, i1* %1", var));
+        var
     }
 
     fn parse_or_exp(&mut self) -> String {
+        // 当前的逻辑表达式计算结果
         let mut operand = self.parse_and_exp();
+        // 短路求值用到的固定block
+        let true_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        let false_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        let exit_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        // 计算下一个逻辑表达式用到的block
+        let mut next_block = self.assigner.get_next_block();
+        self.assigner.go_next_block();
+        // 循环计算逻辑表达式最终结果
+        self.add_block_ins(format!(
+            "br i1 {}, label %{}, label %{}",
+            operand, true_block, next_block
+        ));
+        self.block_code += format!("{}:\n", next_block).as_str();
         while self.iter.clone().next().unwrap() == &Token::Or {
             self.consume_token(Token::Or);
             let var = self.assigner.new_var();
             let tmp = self.parse_and_exp();
             self.add_block_ins(format!("{} = or i1 {},{}", var, operand, tmp));
             operand = var;
+            // 短路求值
+            next_block = self.assigner.get_next_block();
+            self.assigner.go_next_block();
+            self.add_block_ins(format!(
+                "br i1 {}, label %{}, label %{}",
+                operand, true_block, next_block
+            ));
+            self.block_code += format!("{}:\n", next_block).as_str();
         }
-        operand
+        self.add_block_ins(format!("br label %{}", false_block));
+        // 返回true的情况
+        self.block_code += format!("{}:\n", true_block).as_str();
+        self.add_block_ins(format!("store i1 1, i1* %1"));
+        self.add_block_ins(format!("br label %{}", exit_block));
+        // 返回false的情况
+        self.block_code += format!("{}:\n", false_block).as_str();
+        self.add_block_ins(format!("store i1 0, i1* %1"));
+        self.add_block_ins(format!("br label %{}", exit_block));
+        // 唯一的出口block
+        self.block_code += format!("{}:\n", exit_block).as_str();
+        let var = self.assigner.new_var();
+        self.add_block_ins(format!("{} = load i1, i1* %1", var));
+        var
     }
 }
 
