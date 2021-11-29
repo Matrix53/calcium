@@ -1,4 +1,4 @@
-[jobs.lab8]
+[jobs.mdarray]
 
 image = { source = "dockerfile", path = "." }
 
